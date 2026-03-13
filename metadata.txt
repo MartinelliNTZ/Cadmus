@@ -20,7 +20,7 @@ changelog=
     2.0.0
         - Plugin renamed to Cadmus
         - Improved dialogs and user interface
-        - Better logging and documentation
+        - Better logging and documentations
 
     1.7.0
         - Improved interface consistency across tools

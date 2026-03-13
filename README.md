@@ -1,10 +1,10 @@
 # 🧰 Cadmus QGIS Plugin
 
-![Cadmus Logo](resources/icons/cadmus_icon.png) ![MTL Agro](resources/icons/mtl_agro.png)
+![Cadmus Logo](resources/icons/cadmus_icon.png) 
 
 **Cadmus** é um conjunto avançado de ferramentas para **QGIS** focado em **automação de layouts**, **processamento vetorial/raster**, **otimização de fluxos cartográficos** e **produtividade agrícola/geoespacial** 🗺️⚙️🚜
 
-Desenvolvido pela **[MTL Agro](https://mtlagro.com.br/)**, reúne soluções profissionais para **exportação em lote**, **edição massiva**, **análises automatizadas** e **ferramentas interativas**, reduzindo drasticamente etapas manuais.
+Desenvolvido pela **[MTL Agro]**, reúne soluções profissionais para **exportação em lote**, **edição massiva**, **análises automatizadas** e **ferramentas interativas**, reduzindo drasticamente etapas manuais.
 
 [![Health Status](resources/images/canopy.svg)](resources/images/canopy.svg)
 
@@ -81,7 +81,7 @@ Cadmus/
 **Status**: Production Ready | **Versão**: 1.0+  
 **Licença**: [GPL-3.0](LICENSE)
 
-![MTL Agro](resources/icons/mtl_agro.png) **Contato**: suporte@mtlagro.com.br
+![MTL Agro](resources/icons/mtl_agro.png) **Contato**: martinelli.matheus2@gmail.com
 
 ---
 

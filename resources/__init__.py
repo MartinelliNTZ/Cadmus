@@ -7,7 +7,6 @@ Este arquivo expõe as classes mais usadas presentes em
 como `from Cadmus.resources import AppBarWidget`.
 """
 
-from ..resources_rc import *
 
 # Styles
 from .styles.BaseStyles import BaseStyles

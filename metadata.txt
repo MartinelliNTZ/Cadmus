@@ -1,0 +1,108 @@
+[general]
+name=Cadmus
+description=Advanced automation and geospatial productivity tools for QGIS projects.
+about=Cadmus is a productivity plugin for QGIS focused on cartographic automation and geospatial workflows. It provides tools for batch layout export (PDF/PNG), mass text replacement in layouts, automatic loading of datasets from folders, vector attribute utilities, raster sampling, statistical analysis and interactive coordinate tools. The plugin also exposes algorithms in the Processing Toolbox to support automated workflows and batch processing.
+version=2.0.0
+author=Matheus A.S. Martinelli
+email=martinelli.matheus11@gmail.com
+license=GPL-2.0-or-later
+qgisMinimumVersion=3.16
+qgisMaximumVersion=3.99
+category=Vector
+tags=layouts, automation, processing, vector, raster, statistics, drone
+icon=icon.png
+plugin_dependencies=PyPDF2,Pillow
+hasProcessingProvider=yes
+experimental=False
+deprecated=False
+
+changelog=    
+    2.0.0
+        - Plugin renamed to Cadmus
+        - Improved dialogs and user interface
+        - Better logging and documentation
+
+    1.7.0
+        - Improved interface consistency across tools
+        - Better stability and error handling
+        - Various usability improvements
+
+    1.6.0
+        - Faster processing for large vector layers
+        - Improved handling of drone photo coordinate files (MRK)
+        - Better progress reporting during long operations
+        - Multiple stability fixes and performance improvements
+
+    1.5.0
+        - Improved vector field calculations and processing performance
+        - Better handling of large datasets
+        - New settings panel for vector calculation methods
+        - Stability fixes and UI improvements
+
+    1.4.0
+        - Added new vector tools (multipart to singlepart, copy attributes)
+        - Added debugging log viewer
+        - Improved internal processing tools and workflows
+        - Various bug fixes and compatibility improvements    
+    1.3.0
+        - New dedicated main menu tab
+        - New tool: Automatic area, length, and XY field calculation
+        - Improved UTM tool with municipality and state information
+        - New tool: Drone photo track and point extraction from MRK files
+        - New toolbar groups for Vectors and Precision Agriculture
+
+    1.2.6
+        - Added “About” information menu
+        - Reorganized toolbar with logical grouping
+        - Added instructions tab for Implement Track creation tool
+        - Fixed tool icon-related issues
+        - New tool: Get UTM Zone and Elevation from map click
+
+    1.2.5
+        - Updated Implement Track tool for QGIS 3.16 compatibility
+        - Fixed PDF and PNG export issues
+        - Added automatic Python dependencies installer
+
+    1.2.4
+        - Processing: DEM Validator (initial implementation, unstable)
+
+    1.2.3
+        - Refactored processing logic (Value Sampling, Field Difference, Statistics)
+        - Fixed Statistics tool issue where CSV export option was not saved
+        - Added configurable output CRS to Value Sampling tool
+        - Centralized internal tool key management
+        - Fixed QGIS restart tool launching multiple instances
+
+    1.2.2
+        - General bug fixes and internal improvements
+
+    1.2.1
+        - Bug fixes
+        - Fixed Statistics tool text field handling issue
+
+    1.2.0
+        - New tool: Load folders of files into QGIS
+        - Added usage instructions to all plugin tools
+        - Improved Replace tool to support full label replacement
+        - Processing: Batch raster value sampling
+        - Added custom icons to Processing Toolbox
+        - Processing: Field Difference generator
+
+    1.1.2
+        - Added dedicated plugin tab in QGIS interface
+        - Fixed Export All tool freeze
+        - Added PDF and PNG book generation
+        - Removed Replace Layouts tool from main panel
+        - Saved settings using preferences system
+
+    1.1.1
+        - Added QGIS restart tool
+        - Added Processing Provider
+
+    1.1.0
+        - New tool: Replace Text in Layouts (automatic backup and detailed logs)
+
+    1.0.0
+        - Initial release
+        - Export All Layouts tool (PDF/PNG)
+

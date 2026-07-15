@@ -1,4 +1,4 @@
-# core/engine_tasks/SaveVectorStep.py
+# -*- coding: utf-8 -*-
 
 from .BaseStep import BaseStep
 from ..config.LogUtils import LogUtils
@@ -29,7 +29,9 @@ class SaveVectorStep(BaseStep):
                 f"SaveVectorStep: falha ao carregar camada de {current_path}. "
                 f"Provider: {layer.providerType()}"
             )
-            raise RuntimeError("SaveVectorStep: falha ao carregar camada do current_path.")
+            raise RuntimeError(
+                "SaveVectorStep: falha ao carregar camada do current_path."
+            )
 
         logger.debug(f"SaveVectorStep: salvando {output_name} para {output_path}")
 
@@ -39,15 +41,16 @@ class SaveVectorStep(BaseStep):
             save_to_folder=save_to_folder,
             output_name=output_name or layer.name(),
             decision="rename",
-            tool_key=tool_key
+            tool_key=tool_key,
         )
 
     def on_success(self, context, result):
-        logger = LogUtils(tool=context.get("tool_key"), class_name=self.__class__.__name__)
+        logger = LogUtils(
+            tool=context.get("tool_key"), class_name=self.__class__.__name__
+        )
 
         if not result:
             logger.error("SaveVectorStep: falha ao salvar camada")
-            raise RuntimeError("SaveVectorStep: falha ao salvar camada.")
 
-        logger.info(f"SaveVectorStep.on_success: camada salva com sucesso")
+        logger.info("SaveVectorStep.on_success: camada salva com sucesso")
         context.set("layer", result)

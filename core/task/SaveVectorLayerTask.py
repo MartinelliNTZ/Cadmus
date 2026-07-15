@@ -1,9 +1,8 @@
-# core/tasks/SaveLayerTask.py
-
+# -*- coding: utf-8 -*-
 from .BaseTask import BaseTask
 from ...utils.vector.VectorLayerSource import VectorLayerSource
 from ...core.config.LogUtils import LogUtils
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 
 class SaveVectorLayerTask(BaseTask):
@@ -20,7 +19,7 @@ class SaveVectorLayerTask(BaseTask):
         save_to_folder: bool,
         output_name: str,
         decision: str = "rename",
-        tool_key: str
+        tool_key: str,
     ):
         super().__init__("Salvando camada", tool_key)
 
@@ -42,7 +41,7 @@ class SaveVectorLayerTask(BaseTask):
                 save_to_folder=self.save_to_folder,
                 output_name=self.output_name,
                 decision=self.decision,
-                external_tool_key=self.tool_key
+                external_tool_key=self.tool_key,
             )
 
             if not result_layer:

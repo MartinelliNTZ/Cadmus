@@ -1,6 +1,5 @@
 from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QFont
 
 
 class HudProgressBar(QWidget):
@@ -8,21 +7,17 @@ class HudProgressBar(QWidget):
     def __init__(self, title="PROCESSING DATA"):
         super().__init__()
 
-        self.setWindowFlags(
-            Qt.FramelessWindowHint |
-            Qt.WindowStaysOnTopHint |
-            Qt.Tool
-        )
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
 
-        #self.setAttribute(Qt.WA_TranslucentBackground)
+        # self.setAttribute(Qt.WA_TranslucentBackground)
 
         layout = QVBoxLayout()
 
         self.label = QLabel(title)
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.percent = QLabel("0 %")
-        self.percent.setAlignment(Qt.AlignCenter)
+        self.percent.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.bar = QProgressBar()
         self.bar.setMinimum(0)

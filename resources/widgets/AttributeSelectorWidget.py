@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 
 from qgis.PyQt.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QCheckBox, QListWidget, QPushButton, QListWidgetItem
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QCheckBox,
+    QListWidget,
+    QPushButton,
+    QListWidgetItem,
 )
 from qgis.PyQt.QtCore import Qt
+from ...i18n.TranslationManager import STR
 
 
 class AttributeSelectorWidget(QWidget):
@@ -15,8 +22,8 @@ class AttributeSelectorWidget(QWidget):
     def __init__(
         self,
         *,
-        title="Atributos",
-        check_all_text="Usar todos os atributos",
+        title=STR.ATTRIBUTES,
+        check_all_text=STR.USE_ALL_ATTRIBUTES,
         parent=None
     ):
         super().__init__(parent)
@@ -34,14 +41,14 @@ class AttributeSelectorWidget(QWidget):
         layout.addWidget(self.chk_all)
 
         self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         layout.addWidget(self.list_widget)
 
         btn_layout = QHBoxLayout()
 
-        self.btn_select = QPushButton("✔ Selecionar")
-        self.btn_unselect = QPushButton("✖ Remover")
-        self.btn_invert = QPushButton("⇄ Inverter")
+        self.btn_select = QPushButton(f"✔ {STR.SELECT}")
+        self.btn_unselect = QPushButton(f"✖ {STR.REMOVE}")
+        self.btn_invert = QPushButton(f"⇄ {STR.INVERT}")
 
         btn_layout.addWidget(self.btn_select)
         btn_layout.addWidget(self.btn_unselect)
@@ -53,12 +60,8 @@ class AttributeSelectorWidget(QWidget):
         # bindings
         self.chk_all.toggled.connect(self._on_chk_all_toggled)
 
-        self.btn_select.clicked.connect(
-            lambda: self._set_check_state(Qt.Checked)
-        )
-        self.btn_unselect.clicked.connect(
-            lambda: self._set_check_state(Qt.Unchecked)
-        )
+        self.btn_select.clicked.connect(lambda: self._set_check_state(Qt.CheckState.Checked))
+        self.btn_unselect.clicked.connect(lambda: self._set_check_state(Qt.CheckState.Unchecked))
         self.btn_invert.clicked.connect(self._invert_selection)
 
     # ------------------------------------------------------------------
@@ -70,7 +73,7 @@ class AttributeSelectorWidget(QWidget):
 
         for name in field_names:
             item = QListWidgetItem(name)
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.CheckState.Checked)
             self.list_widget.addItem(item)
 
     def get_selected_fields(self):
@@ -80,15 +83,14 @@ class AttributeSelectorWidget(QWidget):
         return [
             self.list_widget.item(i).text()
             for i in range(self.list_widget.count())
-            if self.list_widget.item(i).checkState() == Qt.Checked
+            if self.list_widget.item(i).checkState() == Qt.CheckState.Checked
         ]
 
     def use_all_fields(self) -> bool:
         return self.chk_all.isChecked()
-    def set_checked_all(self,checked):
-        self.chk_all.setChecked(checked)
 
-    
+    def set_checked_all(self, checked):
+        self.chk_all.setChecked(checked)
 
     # ------------------------------------------------------------------
     # INTERNO
@@ -107,10 +109,11 @@ class AttributeSelectorWidget(QWidget):
 
     def _set_check_state(self, state):
         selected = self.list_widget.selectedItems()
-        items = selected if selected else [
-            self.list_widget.item(i)
-            for i in range(self.list_widget.count())
-        ]
+        items = (
+            selected
+            if selected
+            else [self.list_widget.item(i) for i in range(self.list_widget.count())]
+        )
         for item in items:
             item.setCheckState(state)
 
@@ -118,5 +121,5 @@ class AttributeSelectorWidget(QWidget):
         for i in range(self.list_widget.count()):
             item = self.list_widget.item(i)
             item.setCheckState(
-                Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+                Qt.CheckState.Unchecked if item.checkState() == Qt.CheckState.Checked else Qt.CheckState.Checked
             )

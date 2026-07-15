@@ -7,7 +7,7 @@ Projetado para ser independente da view/GUI e reaproveitável por outras ferrame
 
 import math
 import statistics
-from typing import Dict, List, Iterable, Tuple, Any
+from typing import Dict, List, Iterable
 
 
 def _percentile(sorted_vals: List[float], q: float) -> float:
@@ -26,7 +26,6 @@ def _percentile(sorted_vals: List[float], q: float) -> float:
     return float(sorted_vals[lo] * (1 - weight) + sorted_vals[hi] * weight)
 
 
-
 class StatsCalculator:
     """
     Classe com métodos estáticos para calcular estatísticas sobre listas numéricas.
@@ -34,6 +33,7 @@ class StatsCalculator:
       e devolve dicionário label->valor (raw floats ou nan/None).
     - projetada para ser independente do QGIS; aceita listas de float.
     """
+
     DEFAULT_STATS_ORDER = [
         ("MEAN_ABS", "mean_abs"),
         ("MEAN", "mean"),
@@ -50,11 +50,13 @@ class StatsCalculator:
         ("SUM", "sum"),
         ("CV", "cv"),
         ("SKEW", "skew"),
-        ("KURT", "kurt")
+        ("KURT", "kurt"),
     ]
 
     @staticmethod
-    def compute_field_stats(values: Iterable[float], stats_enabled: Dict[str, bool]) -> Dict[str, float]:
+    def compute_field_stats(
+        values: Iterable[float], stats_enabled: Dict[str, bool]
+    ) -> Dict[str, float]:
         vals = sorted(float(x) for x in values)
         n = len(vals)
         res = {}
@@ -86,7 +88,11 @@ class StatsCalculator:
         if stats_enabled.get("STD_POP", False):
             res["STD_POP"] = math.sqrt(sum((x - mean) ** 2 for x in vals) / n)
         if stats_enabled.get("STD_SAMP", False):
-            res["STD_SAMP"] = math.sqrt(sum((x - mean) ** 2 for x in vals) / (n - 1)) if n > 1 else float("nan")
+            res["STD_SAMP"] = (
+                math.sqrt(sum((x - mean) ** 2 for x in vals) / (n - 1))
+                if n > 1
+                else float("nan")
+            )
         if stats_enabled.get("MIN", False):
             res["MIN"] = vals[0]
         if stats_enabled.get("MAX", False):
@@ -96,7 +102,8 @@ class StatsCalculator:
         if stats_enabled.get("MODE", False):
             try:
                 res["MODE"] = statistics.mode(vals)
-            except Exception:
+            except Exception as e:
+                print(f"Warning: could not compute mode for values {vals}: {e}")
                 res["MODE"] = float("nan")
         if stats_enabled.get("VARIANCE", False):
             res["VARIANCE"] = pvariance
@@ -110,14 +117,14 @@ class StatsCalculator:
         if stats_enabled.get("SKEW", False):
             sd = pstdev
             if sd > 0:
-                skew = sum((x - mean) ** 3 for x in vals) / (n * sd ** 3)
+                skew = sum((x - mean) ** 3 for x in vals) / (n * sd**3)
                 res["SKEW"] = skew
             else:
                 res["SKEW"] = float("nan")
         if stats_enabled.get("KURT", False):
             sd = pstdev
             if sd > 0:
-                kurt = sum((x - mean) ** 4 for x in vals) / (n * sd ** 4) - 3
+                kurt = sum((x - mean) ** 4 for x in vals) / (n * sd**4) - 3
                 res["KURT"] = kurt
             else:
                 res["KURT"] = float("nan")
@@ -130,6 +137,7 @@ class AttributeStatisticsModel:
     Orquestrador que conecta extração de campos/valores com StatsCalculator e Preferences.
     Esta classe é a API que a view (QGIS ProcessingAlgorithm) deve usar.
     """
+
     STATS_LABELS = {
         "MEAN": "Media",
         "MEAN_ABS": "Media Absoluta",
@@ -146,11 +154,11 @@ class AttributeStatisticsModel:
         "SUM": "Soma",
         "CV": "Coeficiente de Variaçao",
         "SKEW": "Assimetria",
-        "KURT": "Curtose"
+        "KURT": "Curtose",
     }
 
     def __init__(self, stats_calculator: StatsCalculator = None):
-      
+
         self._calc = stats_calculator or StatsCalculator()
 
     def extract_numeric_fields(self, qgis_fields) -> List[str]:
@@ -161,11 +169,15 @@ class AttributeStatisticsModel:
         for f in qgis_fields:
             fn = f.name()
             t = f.typeName().lower()
-            if "int" in t or "float" in t or "real" in t or "double" in t or "numeric" in t:
+            if (
+                "int" in t or "float" in t or "real" in t or "double" in t or "numeric" in t
+            ):
                 numeric.append(fn)
         return numeric
 
-    def collect_values(self, features: Iterable, numeric_field_names: List[str]) -> Dict[str, List[float]]:
+    def collect_values(
+        self, features: Iterable, numeric_field_names: List[str]
+    ) -> Dict[str, List[float]]:
         """
         features: iterable de QgsFeature (indexável por nome do campo).
         Retorna dicionário field -> lista de floats (apenas valores finitos).
@@ -180,12 +192,15 @@ class AttributeStatisticsModel:
                     val = float(v)
                     if math.isfinite(val):
                         values_by_field[fn].append(val)
-                except Exception:
+                except Exception as e:
                     # valores não numéricos são ignorados
-                    pass
+                    print(f"Warning: could not compute statistics for values  {e}")
+                    return {}
         return values_by_field
 
-    def compute_all(self, values_by_field: Dict[str, List[float]], stats_enabled: Dict[str, bool]) -> Dict[str, Dict[str, float]]:
+    def compute_all(
+        self, values_by_field: Dict[str, List[float]], stats_enabled: Dict[str, bool]
+    ) -> Dict[str, Dict[str, float]]:
         """
         Para cada campo calcula as estatísticas habilitadas.
         Retorna dict: campo -> {STAT_KEY: valor}

@@ -30,42 +30,42 @@ class LineFieldsStep(BaseStep):
             field_map=context.get("field_map"),
             precision=context.get("precision", 4),
             tool_key=context.get("tool_key"),
-            tmp_dir=tmp_dir
+            tmp_dir=tmp_dir,
         )
 
     def on_success(self, context: ExecutionContext, result):
         """
         Apply attribute mappings computed by the task on the MAIN THREAD.
-        Result expected shape: { 'updates': {fid: {field_name: value}}, 'missing_fields': [field_name,...] }
+
         """
-        logger = LogUtils(tool=context.get("tool_key"), class_name=self.__class__.__name__)
+        logger = LogUtils(
+            tool=context.get("tool_key"), class_name=self.__class__.__name__
+        )
         logger.info("LineFieldsStep.on_success: applying results")
 
         if not result or not isinstance(result, dict):
-            logger.error(
-                f"LineFieldsStep.on_success: resultado inválido: {result}"
-            )
+            logger.error(f"LineFieldsStep.on_success: resultado inválido: {result}")
             return
 
         layer = context.get("layer")
         if layer is None:
-            logger.error(
-                "LineFieldsStep.on_success: layer ausente no contexto"
-            )
+            logger.error("LineFieldsStep.on_success: layer ausente no contexto")
             return
 
         # 1) Add missing fields into the layer edit buffer (do not save)
         missing = result.get("missing_fields", []) or []
-        started_editing = False
+
         if missing:
             if not layer.isEditable():
                 layer.startEditing()
-                started_editing = True
+
             for fname in missing:
-                logger.debug(
-                    f"LineFieldsStep: adicionando campo (edição) {fname}"
+                logger.debug(f"LineFieldsStep: adicionando campo (edição) {fname}")
+                layer.addAttribute(
+                    QgsField(
+                        fname, QVariant.Double, len=20, prec=context.get("precision", 4)
+                    )
                 )
-                layer.addAttribute(QgsField(fname, QVariant.Double, len=20, prec=context.get("precision", 4)))
             layer.updateFields()
 
         # 2) Build provider-compatible mapping (fid -> {field_index: value})
@@ -84,26 +84,22 @@ class LineFieldsStep(BaseStep):
 
         # 3) Apply in batches on main thread
         if not provider_updates:
-            logger.info(
-                "LineFieldsStep: nada a aplicar"
-            )
+            logger.info("LineFieldsStep: nada a aplicar")
             return
 
         items = list(provider_updates.items())
         total = len(items)
         chunk = 2000
-        
+
         # Bloquear signals da layer durante atualização em batch para evitar overhead
         layer.blockSignals(True)
         try:
             for i in range(0, total, chunk):
                 if context.is_cancelled():
-                    logger.info(
-                        "LineFieldsStep: cancelado durante aplicação"
-                    )
+                    logger.info("LineFieldsStep: cancelado durante aplicação")
                     break
 
-                batch_items = dict(items[i:i+chunk])
+                batch_items = dict(items[i: i + chunk])
                 for fid, idx_map in batch_items.items():
                     for idx, val in idx_map.items():
                         try:
@@ -113,7 +109,7 @@ class LineFieldsStep(BaseStep):
                                 f"LineFieldsStep: falha ao aplicar fid={fid} idx={idx} err={e}"
                             )
                 logger.debug(
-                    f"LineFieldsStep: applied edit-buffer batch {i}-{i+len(batch_items)} items={len(batch_items)}"
+                    f"Aapplied edit-buffer batch {i}-{i + len(batch_items)} items={len(batch_items)}"
                 )
                 QApplication.processEvents()
         finally:

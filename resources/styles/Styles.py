@@ -5,13 +5,9 @@ Responsável apenas por DEFINIR estilos, não por aplicar lógica.
 """
 
 from .BaseStyles import BaseStyles
-from .CoffeTheme import CoffeTheme
 
 
 class Styles(BaseStyles):
-
-   
-
 
     @staticmethod
     def calc_checkbox_grid_height(num_items: int, items_per_row: int = 1) -> int:
@@ -180,7 +176,7 @@ class Styles(BaseStyles):
     def collapsible_parameters():
         """
         Estilo para CollapsibleParametersWidget (parâmetros avançados expansíveis).
-        
+
         Componentes:
         - Header: background degradado, borda inferior
         - Ícone: seta direcionável (→ ↓)
@@ -240,7 +236,6 @@ class Styles(BaseStyles):
         }}
         """
 
-
     # ==========================================================
     # WIDGETS
     # ==========================================================
@@ -289,7 +284,6 @@ class Styles(BaseStyles):
         margin: 4px;
         """
 
-
     @staticmethod
     def bottom_action_buttons_widget():
 
@@ -311,6 +305,29 @@ class Styles(BaseStyles):
         """
 
     @staticmethod
+    def dropdown_selector_widget():
+
+        return f"""
+        {Styles.label()}
+        QComboBox {{
+            background: {Styles.COLOR_BACKGROUND_PANEL};
+            color: {Styles.COLOR_TEXT_PRIMARY};
+            border: 1px solid {Styles.COLOR_BORDER};
+            border-radius: {Styles.INPUT_BORDER_RADIUS}px;
+            padding: {Styles.INPUT_PADDING};
+            min-height: {Styles.INPUT_HEIGHT}px;
+        }}
+
+        QComboBox:hover {{
+            border: 1px solid {Styles.COLOR_PRIMARY_LIGHT};
+        }}
+
+        QComboBox:focus {{
+            border: 1px solid {Styles.COLOR_PRIMARY};
+        }}
+        """
+
+    @staticmethod
     def simple_button_widget():
 
         return f"""
@@ -319,5 +336,110 @@ class Styles(BaseStyles):
             padding:8px 16px;
             font-weight:bold;
             margin: 2px ;
+        }}
+        """
+
+    @staticmethod
+    def color_button_widget():
+
+        return f"""
+        #color_button_widget QLabel#color_button_title {{
+            color: {Styles.COLOR_TEXT_PRIMARY};
+            font-family: {Styles.FONT_FAMILY_DEFAULT};
+            font-size: {Styles.FONT_SIZE_NORMAL};
+            font-weight: bold;
+        }}
+
+        #color_button_widget QLineEdit#color_button_hex_input {{
+            color: {Styles.COLOR_TEXT_PRIMARY};
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: {Styles.FONT_SIZE_SMALL};
+            padding: 1px 6px;
+            background: {Styles.COLOR_BACKGROUND_PANEL};
+            border: 1px solid {Styles.COLOR_BORDER};
+            border-radius: {Styles.INPUT_BORDER_RADIUS}px;
+            min-height: {Styles.COLOR_BUTTON_HEX_HEIGHT}px;
+            max-height: {Styles.COLOR_BUTTON_HEX_HEIGHT}px;
+        }}
+
+        #color_button_widget QLineEdit#color_button_hex_input:focus {{
+            border: 1px solid {Styles.COLOR_PRIMARY};
+        }}
+
+        #color_button_widget QPushButton#color_button_copy {{
+            padding: 0px;
+            margin: 0px;
+            min-width: {Styles.COLOR_BUTTON_COPY_SIZE}px;
+            max-width: {Styles.COLOR_BUTTON_COPY_SIZE}px;
+            min-height: {Styles.COLOR_BUTTON_COPY_SIZE}px;
+            max-height: {Styles.COLOR_BUTTON_COPY_SIZE}px;
+            border-radius: 4px;
+        }}
+        """
+
+    @staticmethod
+    def project_name_dialog():
+        """Retorna o estilo dedicado ao dialogo de nome de projeto."""
+        return f"""
+        QDialog#project_name_dialog {{
+            background: {Styles.COLOR_BACKGROUND_SOFT};
+            border: 1px solid {Styles.COLOR_BORDER};
+            border-radius: 8px;
+        }}
+
+        QDialog#project_name_dialog QLabel#project_name_info_label {{
+            color: {Styles.COLOR_TEXT_PRIMARY};
+            font-family: {Styles.FONT_FAMILY_DEFAULT};
+            font-size: {Styles.FONT_SIZE_NORMAL};
+        }}
+
+        QDialog#project_name_dialog QLabel#project_name_field_label {{
+            color: {Styles.COLOR_TEXT_PRIMARY};
+            font-family: {Styles.FONT_FAMILY_DEFAULT};
+            font-size: {Styles.FONT_SIZE_NORMAL};
+            font-weight: bold;
+        }}
+
+        QDialog#project_name_dialog QLineEdit#project_name_input {{
+            background: {Styles.COLOR_BACKGROUND_PANEL};
+            color: {Styles.COLOR_TEXT_PRIMARY};
+            border: 1px solid {Styles.COLOR_BORDER};
+            border-radius: {Styles.INPUT_BORDER_RADIUS}px;
+            padding: {Styles.INPUT_PADDING};
+            min-height: {Styles.INPUT_HEIGHT}px;
+        }}
+
+        QDialog#project_name_dialog QLineEdit#project_name_input:focus {{
+            border: 1px solid {Styles.COLOR_PRIMARY};
+        }}
+
+        QDialog#project_name_dialog QPushButton#project_name_btn_ok,
+        QDialog#project_name_dialog QPushButton#project_name_btn_cancel {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 {Styles.COLOR_PRIMARY},
+                stop:1 {Styles.COLOR_PRIMARY_DARK});
+            color: {Styles.COLOR_BUTTON_TEXT};
+            border: 1px solid {Styles.COLOR_PRIMARY_DARK};
+            border-radius: {Styles.BUTTON_BORDER_RADIUS}px;
+            padding: {Styles.BUTTON_PADDING};
+            min-height: {Styles.BUTTON_HEIGHT}px;
+            min-width: 84px;
+            font-weight: bold;
+        }}
+
+        QDialog#project_name_dialog QPushButton#project_name_btn_ok:hover,
+        QDialog#project_name_dialog QPushButton#project_name_btn_cancel:hover {{
+            background: {Styles.COLOR_PRIMARY_LIGHT};
+        }}
+
+        QDialog#project_name_dialog QPushButton#project_name_btn_ok:pressed,
+        QDialog#project_name_dialog QPushButton#project_name_btn_cancel:pressed {{
+            background: {Styles.COLOR_PRIMARY_DARK};
+        }}
+
+        QDialog#project_name_dialog QPushButton#project_name_btn_ok:disabled,
+        QDialog#project_name_dialog QPushButton#project_name_btn_cancel:disabled {{
+            background: {Styles.COLOR_BACKGROUND_SOFT};
+            color: {Styles.COLOR_TEXT_SECONDARY};
         }}
         """

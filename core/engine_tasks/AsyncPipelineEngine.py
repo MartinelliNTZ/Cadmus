@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from typing import List, Optional
+from typing import List
 
 from qgis.core import QgsApplication
 
 from .ExecutionContext import ExecutionContext
 from .BaseStep import BaseStep
 from ..config.LogUtils import LogUtils
-from ..task.BaseTask import BaseTask
 from qgis.core import QgsTask
 
 
@@ -14,7 +13,12 @@ class AsyncPipelineEngine:
     """
     Orquestrador genérico de Steps e QgsTasks.
     """
-    logger = LogUtils(tool="AsyncPipelineEngine", class_name="AsyncPipelineEngine", level=LogUtils.DEBUG)
+
+    logger = LogUtils(
+        tool="AsyncPipelineEngine",
+        class_name="AsyncPipelineEngine",
+        level=LogUtils.DEBUG,
+    )
 
     def __init__(
         self,
@@ -37,6 +41,7 @@ class AsyncPipelineEngine:
         self._current_task = None
         self._is_running = False
         self._is_cancelled = False
+
     # -------------------------------------------------
     # Public API
     # -------------------------------------------------
@@ -48,7 +53,6 @@ class AsyncPipelineEngine:
         self._is_running = True
         self._is_cancelled = False
         self._current_index = 0
-
 
         self._pipeline_task = PipelineTask("Processando trilha")
         QgsApplication.taskManager().addTask(self._pipeline_task)
@@ -63,7 +67,13 @@ class AsyncPipelineEngine:
         global_progress = ((step_index + step_progress / 100.0) / total_steps) * 100.0
 
         if self._pipeline_task:
-            self._pipeline_task.setProgress(global_progress)
+            try:
+                self._pipeline_task.setProgress(global_progress)
+            except RuntimeError:
+                self.logger.error(
+                    "PipelineTask C++ object deleted while setting progress",
+                    code="PIPELINE_TASK_DELETED",
+                )
 
     def cancel(self) -> None:
         self._is_cancelled = True
@@ -72,17 +82,22 @@ class AsyncPipelineEngine:
         if self._current_task:
             try:
                 self._current_task.cancel()
-            except RuntimeError:
-                pass
+            except RuntimeError as e:
+                self.logger.error(f"Failed to cancel current task: {e}")
 
         if self._pipeline_task:
-            self._pipeline_task.cancel()
+            try:
+                self._pipeline_task.cancel()
+            except RuntimeError:
+                self.logger.error(
+                    "PipelineTask C++ object deleted while cancelling",
+                    code="PIPELINE_TASK_DELETED",
+                )
 
         self._finish_cancelled()
 
     def is_running(self) -> bool:
         return self._is_running
-
 
     def _run_next_step(self) -> None:
 
@@ -104,6 +119,15 @@ class AsyncPipelineEngine:
         task = step.create_task(self._context)
 
         if task is None:
+            if hasattr(step, "run_inline"):
+                try:
+                    step.run_inline(self._context)
+                except Exception as exc:
+                    self._handle_task_error(exc)
+                    return
+                self._current_index += 1
+                self._run_next_step()
+                return
             raise RuntimeError(f"Step '{step.name()}' returned no task.")
 
         self._current_task = task
@@ -128,13 +152,12 @@ class AsyncPipelineEngine:
         self._run_next_step()
 
     def _handle_task_error(self, exception: Exception):
-
-        step = self._steps[self._current_index]
-
         try:
+            step = self._steps[self._current_index]
+
             step.on_error(self._context, exception)
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"_handle_task_error handler failed: {e}")
 
         self._context.add_error(exception)
         self._finish_error()
@@ -148,8 +171,20 @@ class AsyncPipelineEngine:
         self._current_task = None
 
         if self._pipeline_task:
-            self._pipeline_task.setProgress(100)
-            self._pipeline_task.mark_done()
+            try:
+                self._pipeline_task.setProgress(100)
+            except RuntimeError:
+                self.logger.error(
+                    "PipelineTask C++ object deleted while setting final progress",
+                    code="PIPELINE_TASK_DELETED",
+                )
+            try:
+                self._pipeline_task.mark_done()
+            except RuntimeError:
+                self.logger.error(
+                    "PipelineTask C++ object deleted while marking done on success",
+                    code="PIPELINE_TASK_DELETED",
+                )
 
         if self._on_finished:
             try:
@@ -162,7 +197,13 @@ class AsyncPipelineEngine:
         self._current_task = None
 
         if self._pipeline_task:
-            self._pipeline_task.mark_done()
+            try:
+                self._pipeline_task.mark_done()
+            except RuntimeError:
+                self.logger.error(
+                    "PipelineTask C++ object deleted while marking done on error",
+                    code="PIPELINE_TASK_DELETED",
+                )
 
         if self._on_error:
             try:
@@ -175,13 +216,20 @@ class AsyncPipelineEngine:
         self._current_task = None
 
         if self._pipeline_task:
-            self._pipeline_task.mark_done()
+            try:
+                self._pipeline_task.mark_done()
+            except RuntimeError:
+                self.logger.error(
+                    "PipelineTask C++ object deleted while marking done on cancel",
+                    code="PIPELINE_TASK_DELETED",
+                )
 
         if self._on_cancelled:
             try:
                 self._on_cancelled(self._context)
             except Exception as e:
                 self.logger.error(f"Error:{e}")
+
 
 class PipelineTask(QgsTask):
 
@@ -199,6 +247,3 @@ class PipelineTask(QgsTask):
 
     def mark_done(self):
         self._done = True
-
-    def finished(self, result):
-        pass

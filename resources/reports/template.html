@@ -1,0 +1,1424 @@
+﻿<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relatorio Fotogrametrico</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #151515;
+            --card: #222222;
+            --card-hover: #2A2A2A;
+            --text: #E0E0E0;
+            --muted: #888888;
+            --border: #333333;
+            --l1: #FF1744;
+            --l2: #FF9100;
+            --l3: #FFEA00;
+            --l4: #00E676;
+            --l5: #00C853;
+        }
+        body[data-theme="light"] {
+            --bg: #f7f8fa;
+            --card: #ffffff;
+            --card-hover: #f1f4f8;
+            --text: #202733;
+            --muted: #637084;
+            --border: #dce2ea;
+            --l1: #D50000;
+            --l2: #FF6D00;
+            --l3: #FFD600;
+            --l4: #00C853;
+            --l5: #00A152;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .card:hover {
+            background: var(--card-hover);
+            transform: translateY(-1px);
+        }
+        .card summary {
+            cursor: pointer;
+            font-weight: 700;
+            margin-bottom: 10px;
+            user-select: none;
+            transition: color 0.2s ease, text-shadow 0.2s ease;
+        }
+        .card summary:hover {
+            color: var(--text);
+            text-shadow: 0 0 8px rgba(224, 224, 224, 0.2);
+        }
+        .card details[open] summary {
+            margin-bottom: 12px;
+        }
+        .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .summary-grid { display: grid; gap: 16px; grid-template-columns: 1.2fr 1.2fr 1fr; align-items: stretch; }
+        .half-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; align-items: stretch; }
+        .third-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr; align-items: stretch; }
+        .report-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .report-title h1 {
+            margin-bottom: 6px;
+        }
+        .brand-logos {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-logo {
+            height: 150px;
+            width: auto;
+            object-fit: contain;
+        }
+        h1, h2, h3 { margin-top: 0; }
+        .muted { color: var(--muted); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background: #2A2A2A;
+            letter-spacing: 1px;
+            font-size: 12px;
+        }
+        body[data-theme="light"] th { background: #eef3f8; }
+        tr:nth-child(even) td { background: #1A1A1A; }
+        body[data-theme="light"] tr:nth-child(even) td { background: #f8fafc; }
+        .level-1 { background: var(--l1); color: #111; font-weight: 700; }
+        .level-2 { background: var(--l2); color: #111; font-weight: 700; }
+        .level-3 { background: var(--l3); color: #111; font-weight: 700; }
+        .level-4 { background: var(--l4); color: #111; font-weight: 700; }
+        .level-5 { background: var(--l5); color: #111; font-weight: 700; }
+        .level-na { background: #5f6b7a; color: #fff; font-weight: 700; }
+        .stars { font-size: 22px; letter-spacing: 2px; }
+        .star-full { color: var(--l5); }
+        .star-half {
+            color: var(--l5);
+            position: relative;
+            display: inline-block;
+        }
+        .star-half::after {
+            content: "★";
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--muted);
+            clip-path: inset(0 0 0 50%);
+            -webkit-clip-path: inset(0 0 0 50%);
+        }
+        .star-empty { color: var(--muted); }
+        .chart-wrap { min-height: 220px; }
+        #levelChart { max-height: 180px; }
+        #tempChart, #lrfChart, #isoChart, #tempHourlyChart, #lrfHourlyChart, #isoHourlyChart { min-height: 250px; max-height: 380px; }
+        #map { height: 800px !important; border-radius: 8px; }
+        .dist-stack {
+            display: flex;
+            width: 100%;
+            height: 22px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #edf1f6;
+        }
+        .dist-bar {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #111;
+            white-space: nowrap;
+            min-width: 52px;
+        }
+        .dist-bar.l1 { background: var(--l1); }
+        .dist-bar.l2 { background: var(--l2); }
+        .dist-bar.l3 { background: var(--l3); }
+        .dist-bar.l4 { background: var(--l4); }
+        .dist-bar.l5 { background: var(--l5); }
+        .dist-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 6px 0 10px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+        .legend-dot.l1 { background: var(--l1); }
+        .legend-dot.l2 { background: var(--l2); }
+        .legend-dot.l3 { background: var(--l3); }
+        .legend-dot.l4 { background: var(--l4); }
+        .legend-dot.l5 { background: var(--l5); }
+        .range-details { margin-top: 6px; }
+        .range-details summary {
+            cursor: pointer;
+            color: var(--muted);
+            font-size: 12px;
+            user-select: none;
+        }
+        .range-row {
+            margin-top: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .range-chip {
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            padding: 2px 7px;
+            font-size: 11px;
+            background: transparent;
+        }
+        .range-chip.l1 { border-color: var(--l1); color: var(--l1); }
+        .range-chip.l2 { border-color: var(--l2); color: var(--l2); }
+        .range-chip.l3 { border-color: var(--l3); color: var(--l3); }
+        .range-chip.l4 { border-color: var(--l4); color: var(--l4); }
+        .range-chip.l5 { border-color: var(--l5); color: var(--l5); }
+        .rule-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            background: #fff;
+        }
+        .status-ok { color: #1a9850; font-weight: 700; }
+        .status-warn { color: #b35c00; font-weight: 700; }
+        .status-critical { color: #c62828; font-weight: 700; }
+        .sev-critical { color: #c62828; font-weight: 700; }
+        .sev-alerta { color: #b35c00; font-weight: 700; }
+        .sev-info { color: #1e88e5; font-weight: 700; }
+        .theme-switcher {
+            display: inline-flex;
+            gap: 14px;
+            align-items: center;
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .theme-switcher input[type="radio"] { accent-color: var(--l5); }
+        @media (max-width: 900px) {
+            body { padding: 12px; }
+            th, td { font-size: 12px; }
+            .summary-grid, .half-grid, .third-grid { grid-template-columns: 1fr; }
+        }
+        .footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #d8d8d8;
+        }
+
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .footer-info {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #555;
+        }
+
+        .footer-info a {
+            color: #0b66c3;
+            text-decoration: none;
+        }
+
+        .footer-info a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- TITULO -->
+    <div class="card">
+        <div class="report-header">
+            <div class="report-title">
+                <h1>Relatorio Fotogrametrico</h1>
+                {% set jm = agg.json_meta %}
+                {% if jm and jm.get('titulo') %}
+                <h2 style="margin: 0 0 4px 0; color: var(--l5); font-size: 1.4em;">{{ jm.titulo }}</h2>
+                {% endif %}
+                {% if jm and jm.get('municipio') %}
+                {% set project_title = jm.municipio + '-' + jm.get('state', '') + '-' + jm.get('country', '') %}
+                <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 700;">{{ project_title }}</p>
+                {% endif %}
+                {% if jm and (jm.get('region') or jm.get('state_district')) %}
+                <div style="display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; margin-bottom: 2px;">
+                    {% if jm.get('region') %}
+                    <span><strong>REGIAO:</strong> {{ jm.region }}</span>
+                    {% endif %}
+                    {% if jm.get('state_district') %}
+                    <span><strong>DISTRITO:</strong> {{ jm.state_district }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if jm and (jm.get('epsg') or jm.get('altitude') is not none) %}
+                <div style="display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; margin-bottom: 6px;">
+                    {% if jm.get('epsg') %}
+                    <span><strong>EPSG:</strong> {{ jm.epsg }} SIRGAS 2000 UTM ZONE {{ jm.get('zona_num', '') }}{{ jm.get('zona_letra', '') }}</span>
+                    {% endif %}
+                    {% if jm.get('altitude') is not none %}
+                    <span><strong>ALTITUDE SRTM:</strong> {{ jm.altitude }} m</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if jm and jm.get('generated_at') %}
+                <p class="muted" style="font-size: 13px; margin-bottom: 6px;">
+                    Processado em: <strong>{{ jm.generated_at }}</strong>
+                </p>
+                {% endif %}
+                <p class="muted">Total de imagens: <strong>{{ total_images }}</strong></p>
+                {% set pc = agg.pqi_classification %}
+                {% if pc %}
+                {% set pqi_score = agg.pqi_mean %}
+                {% if pqi_score is not none %}
+                {% set star_ratio = (pqi_score / 100.0 * 5.0) %}
+                {% set full_stars = star_ratio|int %}
+                {% set remainder = star_ratio - full_stars %}
+                {% set has_half = 1 if remainder >= 0.25 else 0 %}
+                {% set empty_stars = 5 - full_stars - has_half %}
+                {% else %}
+                {% set full_stars = pc.level %}
+                {% set has_half = 0 %}
+                {% set empty_stars = 5 - full_stars %}
+                {% endif %}
+                <p>
+                    PQI geral: <strong>{{ pc.score_display }}</strong> ({{ pc.label }})
+                    <span class="stars">
+                        {% for _ in range(full_stars) %}<span class="star-full">★</span>{% endfor %}
+                        {% if has_half %}<span class="star-half">★</span>{% endif %}
+                        {% for _ in range(empty_stars) %}<span class="star-empty">☆</span>{% endfor %}
+                    </span>
+                </p>
+                {% else %}
+                <p class="muted">Classificacao PQI indisponivel</p>
+                {% endif %}
+            </div>
+            <div class="brand-logos">
+                {% if jm and jm.get('logotipo') %}
+                <div style="display: flex; align-items: center;">
+                    <img src="{{ jm.logotipo }}" alt="Logotipo do projeto"
+                         style="max-height: 60px; max-width: 200px; object-fit: contain; border-radius: 6px;" />
+                </div>
+                {% endif %}
+                <img src="{{ cadmus_icon_url }}" alt="Cadmus" class="brand-logo" />
+            </div>
+        </div>
+        <div class="theme-switcher">
+            <label><input type="radio" name="theme_mode" value="dark" checked> Dark Premium</label>
+            <label><input type="radio" name="theme_mode" value="light"> Light Classic</label>
+        </div>
+    </div>
+
+    <!-- GERAL | METRICAS | INSIGHTS AGRO -->
+    <div class="summary-grid">
+        <div class="card">
+            <details open>
+                <summary>GERAL</summary>
+                <table>
+                    <tr><th>Modelo do drone</th><td>{{ agg.general_info.equipment_models | join(', ') if agg.general_info.equipment_models else 'N/A' }}</td></tr>
+                    <tr><th>Numero de serie do drone</th><td>{{ agg.general_info.equipment_serial_numbers | join(', ') if agg.general_info.equipment_serial_numbers else 'N/A' }}</td></tr>
+                    <tr><th>Modelo da camera</th><td>{{ agg.general_info.camera_models | join(', ') if agg.general_info.camera_models else 'N/A' }}</td></tr>
+                    <tr><th>Numero de serie da camera</th><td>{{ agg.general_info.camera_serial_numbers | join(', ') if agg.general_info.camera_serial_numbers else 'N/A' }}</td></tr>
+                    <tr><th>Versao do firmware</th><td>{{ agg.general_info.firmware_versions | join(', ') if agg.general_info.firmware_versions else 'N/A' }}</td></tr>
+                    <tr><th>GPS Datum · Status</th>
+                        <td>
+                            {{ agg.general_info.gps_datum | join(', ') if agg.general_info.gps_datum else 'N/A' }}
+                            ·
+                            {{ agg.general_info.gps_status | join(', ') if agg.general_info.gps_status else 'N/A' }}
+                            {% if agg.general_info.gps_status_xmp %}
+                            - {{ agg.general_info.gps_status_xmp | join(', ') }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><th>Tipo de voo · Qualidade</th>
+                        <td>
+                            {% set alt_class = agg.general_info.altitude_classification_type %}
+                            {% set alt_label = agg.general_info.altitude_classification_label %}
+                            {% set fq = agg.general_info.flight_quality_label %}
+                            {% set fq_type = agg.general_info.flight_quality_type %}
+                            {% if alt_class and alt_class != 'unavailable' %}
+                                <span style="display: inline-block; padding: 2px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; 
+                                    {% if alt_class == 'agl' %}background: #1a9850; color: #111;
+                                    {% elif alt_class == 'relative' %}background: #2196F3; color: #fff;
+                                    {% endif %}">
+                                    {{ alt_label }}
+                                </span>
+                            {% else %}
+                                <span class="muted">Indisponivel</span>
+                            {% endif %}
+                            {% if fq and fq != 'Indisponivel' %}
+                                <span style="display: inline-block; margin-left: 6px; padding: 2px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+                                    {% if fq_type == 'coerente' %}background: #1a9850; color: #111;
+                                    {% elif fq_type == 'agl_recomendado' %}background: #2196F3; color: #fff;
+                                    {% elif fq_type == 'agl_necessario' %}background: #FF9100; color: #111;
+                                    {% elif fq_type == 'agl_incoerente' %}background: #FF1744; color: #fff;
+                                    {% endif %}">
+                                    {{ fq }}
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><th>Data de inicio</th><td>{{ agg.general_info.capture_start }}</td></tr>
+                    <tr><th>Data de termino</th><td>{{ agg.general_info.capture_end }}</td></tr>
+                    <tr><th>Tempo total de voo</th><td>{{ agg.general_info.total_flight_time }}</td></tr>
+                    <tr><th>Numero de voos</th><td>{{ agg.general_info.total_flights }}</td></tr>
+                    <tr><th>Ultimo disparo por camera</th>
+                        <td>{% if agg.general_info.last_shutter_per_camera %}
+                                {% for item in agg.general_info.last_shutter_per_camera %}
+                                    {{ item.camera_serial }}: {{ item.last_shutter_count }}{% if not loop.last %}<br>{% endif %}
+                                {% endfor %}
+                            {% else %} - {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </details>
+        </div>
+        <div class="card">
+            <details open>
+                <summary>METRICAS</summary>
+                {% set m = agg.advanced_analysis.metrics %}
+                <table>
+                    <!-- GSD -->
+                    <tr><th>GSD médio</th>
+                        <td>{% if per_indicator.get('gsd_cm') and per_indicator['gsd_cm'].get('value_mean') is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(per_indicator['gsd_cm']['value_mean']) }} cm</strong>
+                            {% else %}-{% endif %}
+                            {% set gsd = per_indicator.get('gsd_cm', {}) %}
+                            {% if gsd.get('value_p5') is not none and gsd.get('value_p95') is not none and gsd.get('value_percentile_range') is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(gsd['value_p5']) }} cm · p95%: {{ '%.2f'|format(gsd['value_p95']) }} cm
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(gsd['value_percentile_range']) }} cm</span>
+                                </span>
+                            {% endif %}
+                            {% set gsd_stab = agg.general_info.gsd_stability_label %}
+                            {% if gsd_stab and gsd_stab != 'Indisponivel' %}
+                                <span style="display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+                                    {% if agg.general_info.gsd_stability_type == 'stable' %}background: #1a9850; color: #111;
+                                    {% else %}background: #FF9100; color: #111;
+                                    {% endif %}">
+                                    {{ gsd_stab }}
+                                </span>
+                            {% endif %}
+                        </td></tr>
+                    <!-- Altitudes -->
+                    <tr><th>Altitude Relativa</th>
+                        <td>{% if m.relative_altitude_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.relative_altitude_mean) }} m</strong>
+                            {% else %}-{% endif %}
+                            {% if m.relative_altitude_p5 is not none and m.relative_altitude_p95 is not none and m.relative_altitude_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.relative_altitude_p5) }} m · p95%: {{ '%.2f'|format(m.relative_altitude_p95) }} m
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.relative_altitude_range) }} m</span>
+                                </span>
+                            {% endif %}</td>
+                    </tr>
+                    <tr><th>Altura do voo (LRF)</th>
+                        <td>{% if m.lrf_target_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.lrf_target_mean) }} m</strong>
+                            {% else %}-{% endif %}
+                            {% if m.lrf_target_p5 is not none and m.lrf_target_p95 is not none and m.lrf_target_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.lrf_target_p5) }} m · p95%: {{ '%.2f'|format(m.lrf_target_p95) }} m
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.lrf_target_range) }} m</span>
+                                </span>
+                            {% endif %}</td>
+                    </tr>
+                    <tr><th style="width: 40%;">Altitude do solo</th>
+                        <td style="width: 60%;">
+                            {% if m.ground_elevation_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.ground_elevation_mean) }} m</strong>
+                            {% else %}-{% endif %}
+                            {% if m.ground_elevation_p5 is not none and m.ground_elevation_p95 is not none and m.ground_elevation_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.ground_elevation_p5) }} m · p95%: {{ '%.2f'|format(m.ground_elevation_p95) }} m
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.ground_elevation_range) }} m</span>
+                                </span>
+                            {% endif %}
+                            {% set sc = agg.general_info.slope_classification %}
+                            {% set sp = agg.general_info.slope_pct %}
+                            {% if sc and sc != 'Indisponivel' %}
+                                <span style="display: inline-block; margin-left: 6px; padding: 2px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+                                    {% if sp is not none and sp < 1 %}background: #1a9850; color: #111;
+                                    {% elif sp is not none and sp < 3 %}background: #66BD63; color: #111;
+                                    {% elif sp is not none and sp < 5 %}background: #FFEA00; color: #111;
+                                    {% elif sp is not none and sp < 10 %}background: #FF9100; color: #111;
+                                    {% elif sp is not none and sp < 15 %}background: #FF1744; color: #fff;
+                                    {% elif sp is not none and sp < 25 %}background: #D50000; color: #fff;
+                                    {% else %}background: #B71C1C; color: #fff;
+                                    {% endif %}">
+                                    {{ sc }} ({{ sp }}%)
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <!-- Distancia / Drone -->
+                    <tr><th>Distância entre fotos (m)</th>
+                        <td>{% if m.dist3d_prev_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.dist3d_prev_mean) }} m</strong>
+                            {% else %}-{% endif %}
+                            {% if m.dist3d_prev_p5 is not none and m.dist3d_prev_p95 is not none and m.dist3d_prev_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.dist3d_prev_p5) }} m · p95%: {{ '%.2f'|format(m.dist3d_prev_p95) }} m
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.dist3d_prev_range) }} m</span>
+                                </span>
+                            {% endif %}</td>
+                    </tr>
+                    <!-- RTK -->
+                    <tr><th>Idade do sinal RTK</th>
+                        <td>{% if m.rtk_diff_age_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.rtk_diff_age_mean) }}s</strong>
+                            {% else %}-{% endif %}
+                            {% if m.rtk_diff_age_p5 is not none and m.rtk_diff_age_p95 is not none and m.rtk_diff_age_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.rtk_diff_age_p5) }}s · p95%: {{ '%.2f'|format(m.rtk_diff_age_p95) }}s
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.rtk_diff_age_range) }}s</span>
+                                </span>
+                            {% endif %}
+                            {% if m.rtk_diff_age_mean is not none %}
+                                {% if m.rtk_diff_age_mean == 0 %}
+                                    <span style="display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #9E9E9E; color: #111;">
+                                        Voo sem RTK
+                                    </span>
+                                {% elif m.rtk_diff_age_range is not none and m.rtk_diff_age_range > 1.0 %}
+                                    <span style="display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #FF9100; color: #111;">
+                                        RTK Instavel
+                                    </span>
+                                {% elif m.rtk_diff_age_range is not none %}
+                                    <span style="display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #1a9850; color: #111;">
+                                        RTK Estavel
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><th>Estabilidade do sinal RTK</th>
+                        <td>{{ m.rtk_stability_class if m.rtk_stability_class is not none else '-' }}
+                            {% if m.rtk_stability_mean is not none %}(media {{ '%.2f'|format(m.rtk_stability_mean) }}%){% endif %}</td>
+                    </tr>
+                    <tr><th>Precisão RTK efetiva</th>
+                        <td>{% if m.rtk_effective_precision_raw is not none %}{{ m.rtk_effective_precision_raw }}{% elif m.rtk_effective_precision_mean is not none %}{{ '%.3f'|format(m.rtk_effective_precision_mean) }} m (max {{ '%.3f'|format(m.rtk_effective_precision_max) }} m){% else %}-{% endif %}</td>
+                    </tr>
+                    <!-- Gimbal -->
+                    <tr><th>Desalinhamento do gimbal</th>
+                        <td>{% if m.gimbal_offset_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.gimbal_offset_mean) }}°</strong>
+                            {% else %}-{% endif %}
+                            {% if m.gimbal_offset_p5 is not none and m.gimbal_offset_p95 is not none and m.gimbal_offset_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.gimbal_offset_p5) }}° · p95%: {{ '%.2f'|format(m.gimbal_offset_p95) }}°
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.gimbal_offset_range) }}°</span>
+                                </span>
+                            {% endif %}</td>
+                    </tr>
+                    <tr><th>Drone Roll medio (°)</th>
+                        <td>{% if m.flight_roll_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.flight_roll_mean) }}°</strong>
+                            {% else %}-{% endif %}
+                            {% if m.flight_roll_p5 is not none and m.flight_roll_p95 is not none and m.flight_roll_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.flight_roll_p5) }}° · p95%: {{ '%.2f'|format(m.flight_roll_p95) }}°
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.flight_roll_range) }}°</span>
+                                </span>
+                            {% endif %}</td>
+                    </tr>
+                    <tr><th>Drone Yaw medio (°)</th>
+                        <td>{% if m.flight_yaw_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.flight_yaw_mean) }}°</strong>
+                            {% else %}-{% endif %}
+                            {% if m.flight_yaw_p5 is not none and m.flight_yaw_p95 is not none and m.flight_yaw_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.flight_yaw_p5) }}° · p95%: {{ '%.2f'|format(m.flight_yaw_p95) }}°
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.flight_yaw_range) }}°</span>
+                                </span>
+                            {% endif %}</td>
+                    </tr>
+                    <tr><th>Drone Pitch medio (°)</th>
+                        <td>{% if m.flight_pitch_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.flight_pitch_mean) }}°</strong>
+                            {% else %}-{% endif %}
+                            {% if m.flight_pitch_p5 is not none and m.flight_pitch_p95 is not none and m.flight_pitch_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.flight_pitch_p5) }}° · p95%: {{ '%.2f'|format(m.flight_pitch_p95) }}°
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.flight_pitch_range) }}°</span>
+                                </span>
+                            {% endif %}</td>
+                    </tr>
+                </table>
+            </details>
+        </div>
+        <div class="card">
+            <details open>
+                <summary>INSIGHTS AGRO</summary>
+                {% set m = agg.advanced_analysis.metrics %}
+                <table>
+                    <tr><th>Area estimada coberta (ha)</th><td>{{ m.estimated_area_ha if m.estimated_area_ha is not none else 'N/A' }}</td></tr>
+                    <tr><th>Inconsistencia de iluminacao</th><td>{{ m.light_inconsistent_pct }}%</td></tr>
+                    <tr><th>Classes de luz presentes</th>
+                        <td>{% if m.light_source_classes %}
+                                {% for c in m.light_source_classes %}{{ c.label_pt }} ({{ c.count }}) {{ c.pct }}%{% if not loop.last %}<br>{% endif %}{% endfor %}
+                            {% else %}N/A{% endif %}</td>
+                    </tr>
+                    <tr><th>Sobreposicao frontal abaixo de 60%</th><td>{% if m.overlap_below_ideal_pct is not none %}{{ '%.2f'|format(m.overlap_below_ideal_pct) }}%{% else %}-{% endif %}</td></tr>
+                    <tr><th>Sobreposicao frontal media</th>
+                        <td>{% if m.overlap_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.overlap_mean) }} %</strong>
+                            {% else %}-{% endif %}
+                            {% if m.overlap_p5 is not none and m.overlap_p95 is not none and m.overlap_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.overlap_p5) }} % · p95%: {{ '%.2f'|format(m.overlap_p95) }} %
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.overlap_range) }} %</span>
+                                </span>
+                            {% endif %}
+                        </td></tr>
+                    <tr><th>Velocidade media</th>
+                        <td>{% if m.speed_ms_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.speed_ms_mean) }} m/s</strong>
+                            {% else %}-{% endif %}
+                            {% if m.speed_ms_p5 is not none and m.speed_ms_p95 is not none and m.speed_ms_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.speed_ms_p5) }} m/s · p95%: {{ '%.2f'|format(m.speed_ms_p95) }} m/s
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.speed_ms_range) }} m/s</span>
+                                </span>
+                            {% endif %}
+                        </td></tr>
+                    <tr><th>Direcao de voo inconsistente</th><td>{{ m.yaw_inconsistent_pct if m.yaw_inconsistent_pct is not none else '-' }}%</td></tr>
+                    {% set mb_level = m.motion_blur_mean %}
+                    {% if mb_level is not none %}
+                        {% if mb_level <= 0.3 %}{% set mb_class = 'Baixo' %}
+                        {% elif mb_level <= 0.5 %}{% set mb_class = 'Moderado' %}
+                        {% elif mb_level <= 0.8 %}{% set mb_class = 'Alto' %}
+                        {% elif mb_level <= 1.2 %}{% set mb_class = 'Critico' %}
+                        {% else %}{% set mb_class = 'Critico' %}
+                        {% endif %}
+                    {% else %}{% set mb_class = '-' %}
+                    {% endif %}
+                    <tr><th>Motion Blur medio</th>
+                        <td>{% if m.motion_blur_mean is not none %}
+                                <strong style="color: var(--l5);">{{ '%.2f'|format(m.motion_blur_mean) }} ({{ mb_class }})</strong>
+                            {% else %}-{% endif %}
+                            {% if m.motion_blur_p5 is not none and m.motion_blur_p95 is not none and m.motion_blur_range is not none %}
+                                <span class="muted" style="font-size: 12px; margin-left: 6px;">
+                                    · p5%: {{ '%.2f'|format(m.motion_blur_p5) }} · p95%: {{ '%.2f'|format(m.motion_blur_p95) }}
+                                    · <span style="color: var(--l4);">variação: {{ '%.2f'|format(m.motion_blur_range) }}</span>
+                                </span>
+                            {% endif %}
+                        </td></tr>
+                    <tr><th>Indice de qualidade (PQI)</th><td>{% if m.pqi_last_quartile_mean is not none %}{{ '%.2f'|format(m.pqi_last_quartile_mean) }}{% else %}-{% endif %}</td></tr>
+                    <tr><th>Tamanho medio do arquivo</th><td>{% if m.size_mb_mean is not none %}{{ '%.2f'|format(m.size_mb_mean) }} MB{% else %}-{% endif %}</td></tr>
+                </table>
+            </details>
+        </div>
+    </div>
+
+    <!-- RESUMO DE ALERTAS -->
+    <div class="card">
+        <details open>
+            <summary>RESUMO DE ALERTAS ({{ agg.alerts_count if agg.alerts_count is not none else agg.advanced_analysis.critical_alerts|length }})</summary>
+            <div style="display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 12px;">
+                {% set severity_data = agg.alerts_severity if agg.alerts_severity else {} %}
+                {% set s_crit = severity_data.get('CRITICO', 0) %}
+                {% set s_alert = severity_data.get('ALERTA', 0) %}
+                {% set s_info = severity_data.get('INFO', 0) %}
+                {% if s_crit > 0 or s_alert > 0 or s_info > 0 %}
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <span style="background: #c62828; color: #fff; padding: 4px 12px; border-radius: 12px; font-weight: 700; font-size: 14px;">
+                        Criticos: {{ s_crit }}
+                    </span>
+                    <span style="background: #b35c00; color: #fff; padding: 4px 12px; border-radius: 12px; font-weight: 700; font-size: 14px;">
+                        Alertas: {{ s_alert }}
+                    </span>
+                    <span style="background: #1e88e5; color: #fff; padding: 4px 12px; border-radius: 12px; font-weight: 700; font-size: 14px;">
+                        Info: {{ s_info }}
+                    </span>
+                    <span class="muted" style="font-size: 12px;">Total: {{ agg.alerts_count }}</span>
+                </div>
+                {% endif %}
+                {% set summary = agg.alerts_summary if agg.alerts_summary else {} %}
+                {% if summary %}
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    {% for cat, counts in summary.items() %}
+                    <span class="range-chip" style="font-size: 11px; padding: 2px 8px;">
+                        {{ cat }}: {{ counts.get('total', 0) }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% if agg.alerts and agg.alerts|length > 0 %}
+            <table>
+                <tr><th>Severidade</th><th>Categoria</th><th>Titulo</th><th>Detalhe</th><th>Impacto</th><th>Acao</th><th>Afilhados (%)</th></tr>
+                {% for a in agg.alerts %}
+                <tr>
+                    <td class="{{ 'sev-critical' if a.severity == 'CRITICO' else ('sev-alerta' if a.severity == 'ALERTA' else 'sev-info') }}">{{ a.severity }}</td>
+                    <td><span class="range-chip" style="font-size: 10px;">{{ a.category }}</span></td>
+                    <td>{{ a.title }}</td>
+                    <td>{{ a.detail }}</td>
+                    <td>{{ a.impact }}</td>
+                    <td>{{ a.action }}</td>
+                    <td>
+                        {% if a.total_count > 0 %}
+                        {{ a.affected_count }}/{{ a.total_count }}
+                        <span class="muted">({{ a.affected_pct }}%)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if a.flight_ids and a.flight_ids|length > 0 %}
+                <tr style="background: transparent;">
+                    <td colspan="7" style="padding: 2px 8px 8px 8px; border: none;">
+                        <span class="muted" style="font-size: 11px;">Voos afetados:
+                        {% for fid in a.flight_ids %}
+                            {% set flight_folder = flight_folder_map.get(fid) %}
+                            {% if flight_folder %}
+                                <a href="file:///{{ flight_folder | replace('/', '\\\\') }}" target="_blank" style="color: var(--l4); text-decoration: underline;" title="Clique para abrir a pasta do voo">{{ fid }}</a>{% if not loop.last %}, {% endif %}
+                            {% elif base_folder %}
+                                <a href="file:///{{ base_folder | replace('/', '\\\\') }}" target="_blank" style="color: var(--l4); text-decoration: underline;" title="Clique para abrir a pasta raiz">{{ fid }}</a>{% if not loop.last %}, {% endif %}
+                            {% else %}
+                                {{ fid }}{% if not loop.last %}, {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        </span>
+                        {% if a.photos and a.photos|length > 0 %}
+                        <br><span class="muted" style="font-size: 11px;">Fotos:
+                        {% for photo in a.photos %}
+                            {% if photo_path_map.get(photo) %}
+                                <a href="file:///{{ photo_path_map[photo] | replace('/', '\\\\') }}" target="_blank" style="color: var(--l5); text-decoration: underline;" title="Clique para abrir a pasta da foto">{{ photo }}</a>{% if not loop.last %}, {% endif %}
+                            {% else %}
+                                {{ photo }}{% if not loop.last %}, {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+            {% else %}
+            <table>
+                <tr><th>Severidade</th><th>Titulo</th><th>Detalhe</th><th>Impacto</th><th>Acao</th></tr>
+                {% if agg.general_info %}
+                <tr>
+                    <td class="{{ 'sev-critical' if agg.general_info.dewarp_status_type == 'critical' else ('sev-alerta' if agg.general_info.dewarp_status_type == 'warn' else 'sev-info') }}">
+                        {{ 'CRITICO' if agg.general_info.dewarp_status_type == 'critical' else ('ALERTA' if agg.general_info.dewarp_status_type == 'warn' else 'INFO') }}
+                    </td>
+                    <td>Dewarp</td><td>{{ agg.general_info.dewarp_status_message }}</td>
+                    <td>Impacta diretamente geometrias e qualidade radiométrica da reconstrução.</td>
+                    <td>Garantir dewarping habilitado em 100% da missão.</td>
+                </tr>
+                <tr>
+                    <td class="{{ 'sev-alerta' if agg.general_info.altitude_status_type == 'warn' else 'sev-info' }}">
+                        {{ 'ALERTA' if agg.general_info.altitude_status_type == 'warn' else 'INFO' }}
+                    </td>
+                    <td>Altitude incompleta</td><td>{{ agg.general_info.altitude_status_message }}</td>
+                    <td>Afeta consistência altimétrica, GSD e sobreposição prevista.</td>
+                    <td>Corrigir captura de Alt (MRK) e AbsoluteAltitude antes do processamento.</td>
+                </tr>
+                {% endif %}
+                {% if agg.advanced_analysis and agg.advanced_analysis.critical_alerts %}
+                {% for a in agg.advanced_analysis.critical_alerts %}
+                <tr>
+                    <td class="{{ 'sev-critical' if a.severity == 'CRITICO' else ('sev-alerta' if a.severity == 'ALERTA' else 'sev-info') }}">{{ a.severity }}</td>
+                    <td>{{ a.title }}</td><td>{{ a.detail }}</td><td>{{ a.impact }}</td><td>{{ a.action }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </table>
+            {% endif %}
+        </details>
+    </div>
+
+    <!-- PROCESSAMENTO | NIVEIS -->
+    <div class="half-grid">
+        <div class="card">
+            <details open>
+                <summary>PROCESSAMENTO</summary>
+                {% set p = agg.processing %}
+                {% if p.total_seconds is not none %}
+                <table>
+                    <tr><th>Inicio</th><th>Fim</th><th>Total</th></tr>
+                    <tr>
+                        <td class="muted" style="font-size:12px;">{{ p.pipeline_start[:19] if p.pipeline_start else 'N/A' }}</td>
+                        <td class="muted" style="font-size:12px;">{{ p.pipeline_end[:19] if p.pipeline_end else 'N/A' }}</td>
+                        <td><strong style="font-size: 18px; color: var(--l5);">{{ p.total_formatted }}</strong><br><span class="muted" style="font-size:11px;">({{ '%.0f'|format(p.total_seconds) }}s)</span></td>
+                    </tr>
+                </table>
+                {% endif %}
+                {% if p.stages %}
+                <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                    {% set max_sec = p.stages | map(attribute='duration_seconds') | reject('none') | max %}
+                    {% set total_sec = p.total_seconds %}
+                    {% for stage in p.stages %}
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="min-width: 80px; font-size: 12px;">
+                            {{ stage.label }}{% if not stage.present %}<span class="status-warn" style="font-size:9px;"> (x)</span>{% endif %}
+                        </span>
+                        <div style="flex: 1; height: 22px; background: var(--border); border-radius: 4px; overflow: hidden;">
+                            {% if stage.duration_seconds is not none and max_sec and max_sec > 0 %}
+                            {% set pct = (stage.duration_seconds / max_sec * 100) %}
+                            {% set pct_total = (stage.duration_seconds / total_sec * 100) if total_sec and total_sec > 0 else 0 %}
+                            <div style="height: 100%; width: {{ pct }}%; background: linear-gradient(90deg, var(--l4), var(--l5)); border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; min-width: 50px;">
+                                <span style="font-size: 10px; color: #111; font-weight: 700;">{{ stage.duration_formatted }} ({{ '%.0f'|format(pct_total) }}%)</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if p.missing_stages %}
+                <p class="status-warn" style="margin-top:8px;">Ausentes: {{ p.missing_stages | join(', ') }}</p>
+                {% endif %}
+            </details>
+        </div>
+        <div class="card chart-wrap">
+            <details open>
+                <summary>NIVEIS (PQI)</summary>
+                <canvas id="levelChart"></canvas>
+                {% set pqi_dist = agg.pqi_level_distribution %}
+                {% if pqi_dist %}
+                <div class="dist-legend" style="margin-top:8px;">
+                    Distribuicao por nivel de qualidade:
+                    <span class="legend-item"><span class="legend-dot l1"></span>{{ pqi_dist.get(1, 0) }}</span>
+                    <span class="legend-item"><span class="legend-dot l2"></span>{{ pqi_dist.get(2, 0) }}</span>
+                    <span class="legend-item"><span class="legend-dot l3"></span>{{ pqi_dist.get(3, 0) }}</span>
+                    <span class="legend-item"><span class="legend-dot l4"></span>{{ pqi_dist.get(4, 0) }}</span>
+                    <span class="legend-item"><span class="legend-dot l5"></span>{{ pqi_dist.get(5, 0) }}</span>
+                </div>
+                {% endif %}
+            </details>
+        </div>
+    </div>
+
+    <!-- AGRUPAMENTO POR VOO SIMPLES -->
+    <div class="card">
+        <details open>
+            <summary style="font-size: 12px;">AGRUPAMENTO POR VOO - SIMPLES</summary>
+            <div style="overflow-x: auto; font-size: 12px;">
+            <table style="font-size: 12px;">
+            <tr style="font-size: 11px;">
+                <th>Voo</th><th>Imagens</th><th>Inicio</th><th>Fim</th><th>Tempo</th>
+                <th>km/h</th><th>m/s</th>
+                <th>Hectares</th>
+                <th>Altura Relativa</th><th>Altitude</th>
+                <th>GSD (cm)</th>
+                {% if agg.show_column_lrf %}<th>Distancia Solo</th>{% endif %}
+                <th>Temperatura Sensor</th>
+                <th>Gimbal Offset (°)</th>
+                <th>Sobreposição (%)</th>
+                <th>Estab. RTK</th>
+                <th>Motion Blur</th>
+                <th>Distancia (m)</th>
+            </tr>
+            {% for f in agg.per_flight %}
+            <tr>
+                <td>{{ f['flight_id'] }}</td><td>{{ f['images'] }}</td>
+                <td>{{ f['start'] }}</td><td>{{ f['end'] }}</td><td>{{ f['flight_time'] }}</td>
+                <td>{% if f['avg_speed3d_kmh'] is not none %}{{ '%.2f'|format(f['avg_speed3d_kmh']) }}{% else %}-{% endif %}</td>
+                <td>{% if f['avg_speed3d_ms'] is not none %}{{ '%.2f'|format(f['avg_speed3d_ms']) }}{% else %}-{% endif %}</td>
+                <td>{% if f['estimated_area_ha'] is not none %}{{ '%.2f'|format(f['estimated_area_ha']) }}{% else %}-{% endif %}</td>
+                <td>{% if f['avg_relative_altitude'] is not none %}{{ '%.2f'|format(f['avg_relative_altitude']) }}{% else %}-{% endif %}</td>
+                <td>{% if f['altitude_solo'] is not none %}{{ '%.2f'|format(f['altitude_solo']) }}{% else %}-{% endif %}</td>
+                <td>{% if f['level5_means'].get('GroundSampleDistanceCm') is not none %}{{ '%.2f'|format(f['level5_means'].get('GroundSampleDistanceCm')) }}{% else %}-{% endif %}</td>
+                {% if agg.show_column_lrf %}<td>{% if f['avg_lrf_target_distance'] is not none %}{{ '%.2f'|format(f['avg_lrf_target_distance']) }}{% else %}-{% endif %}</td>{% endif %}
+                <td>{% if f['avg_sensor_temperature'] is not none %}{{ '%.2f'|format(f['avg_sensor_temperature']) }}{% else %}-{% endif %}</td>
+                <td>{% if f['level5_means'].get('GimbalOffset') is not none %}{{ '%.2f'|format(f['level5_means'].get('GimbalOffset')) }}°{% else %}-{% endif %}</td>
+                <td>{% if f['level5_means'].get('PredictedOverlap') is not none %}{{ '%.2f'|format(f['level5_means'].get('PredictedOverlap')) }}%{% else %}
+                    {%- if f['level5_means'].get('FOverlap') is not none %}{{ '%.2f'|format(f['level5_means'].get('FOverlap')) }}%{% else %}-{% endif %}
+                {% endif %}</td>
+                <td>{% if f['level5_means'].get('RtkStabilityScore') is not none and f['level5_means'].get('RtkStabilityScore') >= 95 %}Estavel{% elif f['level5_means'].get('RtkStabilityScore') is not none and f['level5_means'].get('RtkStabilityScore') >= 85 %}Moderado{% elif f['level5_means'].get('RtkStabilityScore') is not none %}Instavel{% else %}-{% endif %}</td>
+                <td>{% if f['level5_means'].get('MotionBlurRisk') is not none %}{{ '%.3f'|format(f['level5_means'].get('MotionBlurRisk')) }}{% else %}-{% endif %}</td>
+                <td>{% if f['avg_dist3d_previous'] is not none %}{{ '%.2f'|format(f['avg_dist3d_previous']) }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </table>
+            </div>
+        </details>
+    </div>
+
+    <!-- AGRUPAMENTO POR VOO AVANÇADO -->
+    {% set simple_level5_keys = ['GroundSampleDistanceCm', 'GimbalOffset', 'PredictedOverlap', 'FOverlap', 'RtkStabilityScore', 'MotionBlurRisk'] %}
+    {% set advanced_exclude_level5_keys = ['3DSpeed', 'Alt', 'GroundElevation', 'OrthorectificationPotential', 'Foto', 'PhotogrammetryQualityIndex', 'Speed3dKmh'] %}
+    <div class="card">
+        <details>
+            <summary>AGRUPAMENTO POR VOO - AVANÇADO</summary>
+            <div style="overflow-x: auto;">
+            <table>
+            <tr>
+                <th>Voo</th>
+                {% if agg.show_column_flight_roll %}<th>Drone Roll</th>{% endif %}
+                {% if agg.show_column_flight_yaw %}<th>Drone Yaw</th>{% endif %}
+                {% if agg.show_column_flight_pitch %}<th>Drone Pitch</th>{% endif %}
+                {% if agg.show_column_iso %}<th>ISO</th>{% endif %}
+                {% if agg.show_column_shutter %}<th>Obturador</th>{% endif %}
+                {% if agg.show_column_wb_cct %}<th>Temp Cor (K)</th>{% endif %}
+                {% for col in agg.flight_level5_columns %}
+                {% if agg['show_column_level5_' ~ col.key] and col.key not in simple_level5_keys and col.key not in advanced_exclude_level5_keys %}<th>{{ col.label }}</th>{% endif %}
+                {% endfor %}
+            </tr>
+            {% for f in agg.per_flight %}
+            <tr>
+                <td>{{ f['flight_id'] }}</td>
+                {% if agg.show_column_flight_roll %}<td>{% if f['avg_flight_roll'] is not none %}{{ '%.2f'|format(f['avg_flight_roll']) }}°{% else %}-{% endif %}</td>{% endif %}
+                {% if agg.show_column_flight_yaw %}<td>{% if f['avg_flight_yaw'] is not none %}{{ '%.2f'|format(f['avg_flight_yaw']) }}°{% else %}-{% endif %}</td>{% endif %}
+                {% if agg.show_column_flight_pitch %}<td>{% if f['avg_flight_pitch'] is not none %}{{ '%.2f'|format(f['avg_flight_pitch']) }}°{% else %}-{% endif %}</td>{% endif %}
+                {% if agg.show_column_iso %}<td>{% if f['avg_iso'] is not none %}{{ '%.0f'|format(f['avg_iso']) }}{% else %}-{% endif %}</td>{% endif %}
+                {% if agg.show_column_shutter %}<td>{% if f['avg_shutter_speed_text'] and f['avg_shutter_speed_text'] != 'N/A' %}{{ f['avg_shutter_speed_text'] }}{% else %}-{% endif %}</td>{% endif %}
+                {% if agg.show_column_wb_cct %}<td>{% if f['avg_white_balance_cct'] is not none %}{{ '%.0f'|format(f['avg_white_balance_cct']) }}{% else %}-{% endif %}</td>{% endif %}
+                {% for col in agg.flight_level5_columns %}
+                {% if agg['show_column_level5_' ~ col.key] and col.key not in simple_level5_keys and col.key not in advanced_exclude_level5_keys %}
+                <td>{% if f['level5_means'].get(col.key) is not none %}{{ '%.2f'|format(f['level5_means'].get(col.key)) }}{% else %}-{% endif %}</td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            </table>
+            </div>
+        </details>
+    </div>
+
+    <!-- AGREGADOS -->
+    <div class="card">
+        <details open>
+            <summary>AGREGADOS</summary>
+            <div class="dist-legend">
+                <span class="legend-item"><span class="legend-dot l1"></span>N1</span>
+                <span class="legend-item"><span class="legend-dot l2"></span>N2</span>
+                <span class="legend-item"><span class="legend-dot l3"></span>N3</span>
+                <span class="legend-item"><span class="legend-dot l4"></span>N4</span>
+                <span class="legend-item"><span class="legend-dot l5"></span>N5</span>
+                <span>| abra <strong>Ranges</strong> para ver os valores por cor</span>
+            </div>
+            <table>
+            <tr>
+                <th>Indicador</th><th>Media</th><th>Desvio</th><th>Max</th><th>Min</th><th>Range</th><th>Distribuicao</th>
+            </tr>
+            {% for ind, stat in per_indicator.items() %}
+            <tr>
+                <td title="{{ stat.description }}">{{ stat.label }}<span class="rule-badge">{{ stat.threshold_type }}</span></td>
+                <td>{{ stat.value_mean if stat.value_mean is not none else '-' }}</td>
+                <td>{{ stat.value_std if stat.value_std is not none else '-' }}</td>
+                <td>{{ stat.value_max if stat.value_max is not none else '-' }}</td>
+                <td>{{ stat.value_min if stat.value_min is not none else '-' }}</td>
+                <td>{{ stat.value_range if stat.value_range is not none else '-' }}</td>
+                <td>
+                    {% set d1 = stat.dist.get(1, 0) %}
+                    {% set d2 = stat.dist.get(2, 0) %}
+                    {% set d3 = stat.dist.get(3, 0) %}
+                    {% set d4 = stat.dist.get(4, 0) %}
+                    {% set d5 = stat.dist.get(5, 0) %}
+                    {% set total = d1 + d2 + d3 + d4 + d5 %}
+                    <div class="dist-stack">
+                        {% if d1 > 0 and total > 0 %}<div class="dist-bar l1" title="N1 | {{ stat.level_ranges.get('1', '-') }}" style="flex: {{ d1 }}">N1 {{ d1 }} ({{ ((d1 / total) * 100)|round(0)|int }}%)</div>{% endif %}
+                        {% if d2 > 0 and total > 0 %}<div class="dist-bar l2" title="N2 | {{ stat.level_ranges.get('2', '-') }}" style="flex: {{ d2 }}">N2 {{ d2 }} ({{ ((d2 / total) * 100)|round(0)|int }}%)</div>{% endif %}
+                        {% if d3 > 0 and total > 0 %}<div class="dist-bar l3" title="N3 | {{ stat.level_ranges.get('3', '-') }}" style="flex: {{ d3 }}">N3 {{ d3 }} ({{ ((d3 / total) * 100)|round(0)|int }}%)</div>{% endif %}
+                        {% if d4 > 0 and total > 0 %}<div class="dist-bar l4" title="N4 | {{ stat.level_ranges.get('4', '-') }}" style="flex: {{ d4 }}">N4 {{ d4 }} ({{ ((d4 / total) * 100)|round(0)|int }}%)</div>{% endif %}
+                        {% if d5 > 0 and total > 0 %}<div class="dist-bar l5" title="N5 | {{ stat.level_ranges.get('5', '-') }}" style="flex: {{ d5 }}">N5 {{ d5 }} ({{ ((d5 / total) * 100)|round(0)|int }}%)</div>{% endif %}
+                    </div>
+                    <details class="range-details">
+                        <summary>Ranges</summary>
+                        <div class="range-row">
+                            <span class="range-chip l1">N1: {{ stat.level_ranges.get('1', '-') }}</span>
+                            <span class="range-chip l2">N2: {{ stat.level_ranges.get('2', '-') }}</span>
+                            <span class="range-chip l3">N3: {{ stat.level_ranges.get('3', '-') }}</span>
+                            <span class="range-chip l4">N4: {{ stat.level_ranges.get('4', '-') }}</span>
+                            <span class="range-chip l5">N5: {{ stat.level_ranges.get('5', '-') }}</span>
+                        </div>
+                    </details>
+                </td>
+            </tr>
+            {% endfor %}
+            </table>
+        </details>
+    </div>
+
+    <!-- DETALHES POR IMAGEM -->
+    <div class="card">
+        <details>
+            <summary>DETALHES POR IMAGEM (piores {{ (worst_results or results[:30])|length }})</summary>
+            <div style="overflow-x: auto;">
+            <table>
+            <tr>
+                <th>Arquivo</th><th>PQI</th><th>GSD</th><th>Motion Blur</th><th>RTK Eff. Prec.</th><th>Gimbal Offset</th><th>Yaw Error</th><th>Overlap</th><th>Speed Variac.</th><th>Inc. Angle</th>
+            </tr>
+            {% for r in (worst_results or results[:30]) %}
+            <tr>
+                <td title="Voo: {{ r.flight_id or '-' }}">{{ r.filename }}</td>
+                <td class="level-{{ r.levels.get('photogrammetry_quality_index', 3) }}">{{ r.level5_values.get('PhotogrammetryQualityIndex', r.values.get('photogrammetry_quality_index', '-')) }}</td>
+                <td class="level-{{ r.levels.get('gsd_cm', 3) }}">{{ r.values.get('gsd_cm', '-') }}</td>
+                <td class="level-{{ r.levels.get('motion_blur_risk', 3) }}">{{ r.messages.get('motion_blur_risk', '-') }}</td>
+                <td>{{ r.level5_values.get('RtkEffectivePrecision', '-') }}</td>
+                <td>{% set gim = r.level5_values.get('GimbalOffset') %}{% if gim is not none %}{{ '%.1f°'|format(gim|float) }}{% else %}-{% endif %}</td>
+                <td>{% set yaw = r.level5_values.get('YawAlignmentError') %}{% if yaw is not none %}{{ '%.1f°'|format(yaw|float) }}{% else %}-{% endif %}</td>
+                <td>{% set ov = r.level5_values.get('FOverlap') or r.level5_values.get('PredictedOverlap') %}{% if ov is not none %}{{ '%.0f%%'|format(ov|float) }}{% else %}-{% endif %}</td>
+                <td>{% set sv = r.level5_values.get('SpeedVariationIndex') %}{% if sv is not none %}{{ '%.3f'|format(sv|float) }}{% else %}-{% endif %}</td>
+                <td>{% set ia = r.level5_values.get('IncidenceAngle') %}{% if ia is not none %}{{ '%.1f°'|format(ia|float) }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </table>
+            </div>
+        </details>
+    </div>
+
+    <!-- TEMPERATURA DO SENSOR + LRF TARGET DISTANCE + ISO (por voo, bucketizado) -->
+    {% set has_temp = charts.temp_line is defined %}
+    {% set has_lrf = charts.lrf_line is defined %}
+    {% set has_iso = charts.iso_line is defined %}
+    {% set temp_x_title = charts.temp_line.get('x_axis_title', 'Foto #') if has_temp else 'Foto #' %}
+    {% set lrf_x_title = charts.lrf_line.get('x_axis_title', 'Foto #') if has_lrf else 'Foto #' %}
+    {% set iso_x_title = charts.iso_line.get('x_axis_title', 'Foto #') if has_iso else 'Foto #' %}
+    {% if has_temp and has_lrf and has_iso %}
+    <div class="third-grid">
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.temp_line.title }}</summary>
+                <canvas id="tempChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.lrf_line.title }}</summary>
+                <canvas id="lrfChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.iso_line.title }}</summary>
+                <canvas id="isoChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+    </div>
+    {% elif has_temp and has_lrf %}
+    <div class="half-grid">
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.temp_line.title }}</summary>
+                <canvas id="tempChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.lrf_line.title }}</summary>
+                <canvas id="lrfChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+    </div>
+    {% elif has_temp %}
+    <div class="card chart-wrap">
+        <details open>
+            <summary>{{ charts.temp_line.title }}</summary>
+            <canvas id="tempChart" style="width:100%;"></canvas>
+        </details>
+    </div>
+    {% elif has_lrf %}
+    <div class="card chart-wrap">
+        <details open>
+            <summary>{{ charts.lrf_line.title }}</summary>
+            <canvas id="lrfChart" style="width:100%;"></canvas>
+        </details>
+    </div>
+    {% elif has_iso %}
+    <div class="card chart-wrap">
+        <details open>
+            <summary>{{ charts.iso_line.title }}</summary>
+            <canvas id="isoChart" style="width:100%;"></canvas>
+        </details>
+    </div>
+    {% endif %}
+
+    <!-- MÉDIA POR INTERVALO DE HORA DO DIA (line chart) -->
+    {% set has_temp_hourly = charts.temp_hourly_line is defined %}
+    {% set has_lrf_hourly = charts.lrf_hourly_line is defined %}
+    {% set has_iso_hourly = charts.iso_hourly_line is defined %}
+    {% set temp_interval = charts.temp_hourly_line.get('interval_label', 'Hora') if has_temp_hourly else 'Hora' %}
+    {% set lrf_interval = charts.lrf_hourly_line.get('interval_label', 'Hora') if has_lrf_hourly else 'Hora' %}
+    {% set iso_interval = charts.iso_hourly_line.get('interval_label', 'Hora') if has_iso_hourly else 'Hora' %}
+    {% if has_temp_hourly and has_lrf_hourly and has_iso_hourly %}
+    <div class="third-grid">
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.temp_hourly_line.title }}</summary>
+                <canvas id="tempHourlyChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.lrf_hourly_line.title }}</summary>
+                <canvas id="lrfHourlyChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.iso_hourly_line.title }}</summary>
+                <canvas id="isoHourlyChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+    </div>
+    {% elif has_temp_hourly and has_lrf_hourly %}
+    <div class="half-grid">
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.temp_hourly_line.title }}</summary>
+                <canvas id="tempHourlyChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+        <div class="card chart-wrap">
+            <details open>
+                <summary>{{ charts.lrf_hourly_line.title }}</summary>
+                <canvas id="lrfHourlyChart" style="width:100%;"></canvas>
+            </details>
+        </div>
+    </div>
+    {% elif has_temp_hourly %}
+    <div class="card chart-wrap">
+        <details open>
+            <summary>{{ charts.temp_hourly_line.title }}</summary>
+            <canvas id="tempHourlyChart" style="width:100%;"></canvas>
+        </details>
+    </div>
+    {% elif has_lrf_hourly %}
+    <div class="card chart-wrap">
+        <details open>
+            <summary>{{ charts.lrf_hourly_line.title }}</summary>
+            <canvas id="lrfHourlyChart" style="width:100%;"></canvas>
+        </details>
+    </div>
+    {% elif has_iso_hourly %}
+    <div class="card chart-wrap">
+        <details open>
+            <summary>{{ charts.iso_hourly_line.title }}</summary>
+            <canvas id="isoHourlyChart" style="width:100%;"></canvas>
+        </details>
+    </div>
+    {% endif %}
+
+    <!-- MAPA -->
+    <div class="card">
+        <details>
+            <summary>MAPA</summary>
+            {{ map_snippet | safe }}
+        </details>
+    </div>
+    <div class="footer">
+
+        <img src="{{ cadmus_icon_url }}"
+            alt="Cadmus"
+            class="brand-logo" />
+
+        <div class="footer-info">
+            <strong>Cadmus GIS</strong><br>
+
+            Desenvolvido por <strong>Matheus Martinelli</strong><br>
+
+            Palmas • Tocantins • Brasil<br><br>
+
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 8px;">
+                <a href="https://github.com/MartinelliNTZ" target="_blank" title="GitHub">
+                    <img src="{{ github_icon_url }}" alt="GitHub" style="width: 32px; height: 32px; border-radius: 6px;" />
+                </a>
+                <a href="https://www.linkedin.com/in/matheus-martinelli-a82149108" target="_blank" title="LinkedIn">
+                    <img src="{{ linkedin_icon_url }}" alt="LinkedIn" style="width: 32px; height: 32px; border-radius: 6px;" />
+                </a>
+                <a href="https://www.instagram.com/matheusmartinelli00" target="_blank" title="Instagram">
+                    <img src="{{ instagram_icon_url }}" alt="Instagram" style="width: 32px; height: 32px; border-radius: 6px;" />
+                </a>
+                <a href="mailto:martinelli.matheus11@gmail.com" title="E-mail">
+                    <img src="{{ email_icon_url }}" alt="E-mail" style="width: 32px; height: 32px; border-radius: 6px;" />
+                </a>
+                <a href="https://buymeacoffee.com/martinelliNTZ" target="_blank" title="Buy Me a Coffee">
+                    <img src="{{ buy_me_a_coffee_icon_url }}" alt="Buy Me a Coffee" style="width: 32px; height: 32px; border-radius: 6px;" />
+                </a>
+            </div>
+
+            © 2026 Cadmus. Todos os direitos reservados.
+        </div>
+
+    </div>
+
+    <script>
+        const levelCfg = {{ charts.level_pie | tojson }};
+        let levelChartInstance = null;
+        function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+        function applyChartDefaults() { Chart.defaults.color = cssVar('--muted'); Chart.defaults.borderColor = cssVar('--border'); }
+        function renderLevelChart() {
+            const ctx = document.getElementById('levelChart');
+            if (!ctx || !levelCfg) return;
+            if (levelChartInstance) levelChartInstance.destroy();
+            applyChartDefaults();
+            levelChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: { labels: levelCfg.labels, datasets: [{ data: levelCfg.data, backgroundColor: [cssVar('--l1'), cssVar('--l2'), cssVar('--l3'), cssVar('--l4'), cssVar('--l5')], borderColor: cssVar('--card'), borderWidth: 1 }] }
+            });
+        }
+        {% if charts.temp_line %}
+        const tempCfg = {{ charts.temp_line | tojson }};
+        let tempChartInstance = null;
+        function renderTempChart() {
+            const ctx = document.getElementById('tempChart');
+            if (!ctx || !tempCfg) return;
+            if (tempChartInstance) tempChartInstance.destroy();
+            applyChartDefaults();
+            const xTitle = tempCfg.x_axis_title || 'Foto #';
+            tempChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: tempCfg.datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    parsing: false,
+                    scales: {
+                        x: { type: 'linear', title: { display: true, text: xTitle } },
+                        y: { title: { display: true, text: '°C' } }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+        {% endif %}
+
+        {% if charts.lrf_line %}
+        const lrfCfg = {{ charts.lrf_line | tojson }};
+        let lrfChartInstance = null;
+        function renderLrfChart() {
+            const ctx = document.getElementById('lrfChart');
+            if (!ctx || !lrfCfg) return;
+            if (lrfChartInstance) lrfChartInstance.destroy();
+            applyChartDefaults();
+            const xTitle = lrfCfg.x_axis_title || 'Foto #';
+            lrfChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: lrfCfg.datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    parsing: false,
+                    scales: {
+                        x: { type: 'linear', title: { display: true, text: xTitle } },
+                        y: { title: { display: true, text: 'Distância (m)' } }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+        {% endif %}
+
+        {% if charts.iso_line %}
+        const isoCfg = {{ charts.iso_line | tojson }};
+        let isoChartInstance = null;
+        function renderIsoChart() {
+            const ctx = document.getElementById('isoChart');
+            if (!ctx || !isoCfg) return;
+            if (isoChartInstance) isoChartInstance.destroy();
+            applyChartDefaults();
+            const xTitle = isoCfg.x_axis_title || 'Foto #';
+            isoChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: isoCfg.datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    parsing: false,
+                    scales: {
+                        x: { type: 'linear', title: { display: true, text: xTitle } },
+                        y: { title: { display: true, text: 'ISO' } }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+        {% endif %}
+
+        {% if charts.temp_hourly_line %}
+        const tempHourlyCfg = {{ charts.temp_hourly_line | tojson }};
+        let tempHourlyChartInstance = null;
+        function renderTempHourlyChart() {
+            const ctx = document.getElementById('tempHourlyChart');
+            if (!ctx || !tempHourlyCfg) return;
+            if (tempHourlyChartInstance) tempHourlyChartInstance.destroy();
+            applyChartDefaults();
+            const ds = tempHourlyCfg.datasets[0];
+            tempHourlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: tempHourlyCfg.labels,
+                    datasets: [{
+                        label: ds.label,
+                        data: ds.data,
+                        borderColor: ds.borderColor,
+                        backgroundColor: ds.backgroundColor,
+                        fill: false,
+                        tension: ds.tension || 0.4,
+                        pointRadius: ds.pointRadius || 4,
+                        pointBackgroundColor: ds.pointBackgroundColor,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Hora do Dia' } },
+                        y: { title: { display: true, text: '°C' } }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+        {% endif %}
+
+        {% if charts.lrf_hourly_line %}
+        const lrfHourlyCfg = {{ charts.lrf_hourly_line | tojson }};
+        let lrfHourlyChartInstance = null;
+        function renderLrfHourlyChart() {
+            const ctx = document.getElementById('lrfHourlyChart');
+            if (!ctx || !lrfHourlyCfg) return;
+            if (lrfHourlyChartInstance) lrfHourlyChartInstance.destroy();
+            applyChartDefaults();
+            const datasets = lrfHourlyCfg.datasets.map(function(ds) {
+                return {
+                    label: ds.label,
+                    data: ds.data,
+                    borderColor: ds.borderColor,
+                    backgroundColor: ds.backgroundColor,
+                    borderWidth: ds.borderWidth || 0.5,
+                    borderDash: ds.borderDash || [],
+                    fill: false,
+                    tension: ds.tension || 0.4,
+                    pointRadius: ds.pointRadius || 4,
+                    pointBackgroundColor: ds.pointBackgroundColor,
+                    yAxisID: ds.yAxisID || 'y',
+                };
+            });
+            lrfHourlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: lrfHourlyCfg.labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Hora do Dia' } },
+                        y: {
+                            title: { display: true, text: 'Distância (m)' },
+                            position: 'left',
+                        }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+        {% endif %}
+
+        {% if charts.iso_hourly_line %}
+        const isoHourlyCfg = {{ charts.iso_hourly_line | tojson }};
+        let isoHourlyChartInstance = null;
+        function renderIsoHourlyChart() {
+            const ctx = document.getElementById('isoHourlyChart');
+            if (!ctx || !isoHourlyCfg) return;
+            if (isoHourlyChartInstance) isoHourlyChartInstance.destroy();
+            applyChartDefaults();
+            const ds = isoHourlyCfg.datasets[0];
+            isoHourlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: isoHourlyCfg.labels,
+                    datasets: [{
+                        label: ds.label,
+                        data: ds.data,
+                        borderColor: ds.borderColor,
+                        backgroundColor: ds.backgroundColor,
+                        fill: false,
+                        tension: ds.tension || 0.4,
+                        pointRadius: ds.pointRadius || 4,
+                        pointBackgroundColor: ds.pointBackgroundColor,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Hora do Dia' } },
+                        y: { title: { display: true, text: 'ISO' } }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+        {% endif %}
+
+        function setTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('report_theme', theme);
+            const radio = document.querySelector(`input[name="theme_mode"][value="${theme}"]`);
+            if (radio) radio.checked = true;
+            renderLevelChart();
+        }
+        (function initTheme() {
+            const stored = localStorage.getItem('report_theme');
+            const theme = (stored === 'light' || stored === 'dark') ? stored : 'dark';
+            setTheme(theme);
+            document.querySelectorAll('input[name="theme_mode"]').forEach((input) => {
+                input.addEventListener('change', (e) => setTheme(e.target.value));
+            });
+            {% if charts.temp_line %}
+            renderTempChart();
+            {% endif %}
+            {% if charts.lrf_line %}
+            renderLrfChart();
+            {% endif %}
+            {% if charts.iso_line %}
+            renderIsoChart();
+            {% endif %}
+            {% if charts.temp_hourly_line %}
+            renderTempHourlyChart();
+            {% endif %}
+            {% if charts.lrf_hourly_line %}
+            renderLrfHourlyChart();
+            {% endif %}
+            {% if charts.iso_hourly_line %}
+            renderIsoHourlyChart();
+            {% endif %}
+        })();
+    </script>
+</body>
+</html>

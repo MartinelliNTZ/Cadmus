@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-import os
-import tempfile
-from qgis.core import QgsVectorLayer, QgsDistanceArea, QgsProject
-from qgis.PyQt.QtCore import QVariant
+
+
+from qgis.core import QgsDistanceArea, QgsProject
+
 from .BaseTask import BaseTask
-from ..config.LogUtils import LogUtils
 
 
 class LineFieldsTask(BaseTask):
@@ -17,7 +16,15 @@ class LineFieldsTask(BaseTask):
     O Step correspondente aplica as mudanças no thread principal.
     """
 
-    def __init__(self, *, layer, field_map, precision: int = 4, tool_key: str, tmp_dir: str = None):
+    def __init__(
+        self,
+        *,
+        layer,
+        field_map,
+        precision: int = 4,
+        tool_key: str,
+        tmp_dir: str = None,
+    ):
         super().__init__("Calculando comprimento de linhas", tool_key)
         self.layer = layer
         self.field_map = field_map
@@ -31,9 +38,7 @@ class LineFieldsTask(BaseTask):
         if self.isCanceled():
             return False
 
-        self.logger.info(
-            f"LineFieldsTask._run: START - computing line lengths (worker)"
-        )
+        self.logger.info("LineFieldsTask._run: START - computing line lengths (worker)")
 
         # nudge progress bar immediately
         self.setProgress(1)
@@ -51,9 +56,7 @@ class LineFieldsTask(BaseTask):
 
         for feat in self.layer.getFeatures():
             if self.isCanceled():
-                self.logger.info(
-                    "LineFieldsTask: cancelado durante cálculo"
-                )
+                self.logger.info("LineFieldsTask: cancelado durante cálculo")
                 return False
 
             count += 1
@@ -64,7 +67,9 @@ class LineFieldsTask(BaseTask):
                     length_m = d.measureLength(geom)
                     vals[self.field_map["Elipsoidal"]] = round(length_m, self.precision)
                 if "Cartesiana" in self.field_map:
-                    vals[self.field_map["Cartesiana"]] = round(geom.length(), self.precision)
+                    vals[self.field_map["Cartesiana"]] = round(
+                        geom.length(), self.precision
+                    )
 
                 if vals:
                     updates[feat.id()] = vals
@@ -89,9 +94,10 @@ class LineFieldsTask(BaseTask):
         self.result = {
             "updates": updates,
             "missing_fields": [
-                fname for fname in set(self.field_map.values())
+                fname
+                for fname in set(self.field_map.values())
                 if fname not in [f.name() for f in self.layer.fields()]
-            ]
+            ],
         }
         self.setProgress(100)
         return True

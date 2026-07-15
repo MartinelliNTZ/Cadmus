@@ -1,12 +1,18 @@
+# -*- coding: utf-8 -*-
 import os
 from ...core.config.LogUtils import LogUtils
 from ...plugins.BaseDialog import BaseDialog
 from ...core.ui.WidgetFactory import WidgetFactory
+from ...i18n.TranslationManager import STR
+from ...utils.ToolKeys import ToolKey
+
 
 class InfoDialog(BaseDialog):
-    def __init__(self, instructions_path: str, parent=None, title="Cadmus"):
+    def __init__(self, instructions_path: str, parent=None, title=STR.APP_NAME, tool_key=ToolKey.UNTRACEABLE):
         super().__init__(parent)
-        self.logger = LogUtils(tool="Untraceable", class_name=self.__class__.__name__, level=LogUtils.DEBUG)
+        self.logger = LogUtils(
+            tool=tool_key, class_name=self.__class__.__name__, level=LogUtils.DEBUG
+        )
         self.logger.debug(f"Inicializando InfoDialog com arquivo: {instructions_path}")
 
         # Use BaseDialog layout builder so dialogs share the same shell
@@ -30,19 +36,21 @@ class InfoDialog(BaseDialog):
 
         else:
             browser.setPlainText(
-                f"Arquivo de instruções não encontrado:\n{instructions_path}"
+                f"{STR.FILE_NOT_FOUND}:\n{instructions_path}"
             )
 
-      
         self.layout.addWidget(browser)
-        btn_layout, btn_widget = WidgetFactory.create_simple_button(text="Fechar", parent=self,spacing=20)
+        btn_layout, btn_widget = WidgetFactory.create_simple_button(
+            text=STR.CLOSE, parent=self, spacing=20
+        )
         try:
             btn_widget.clicked.connect(self.close)
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"InfoDialog: failed to connect close button: {e}")
         self.layout.addLayout(btn_layout)
-        self.logger.debug(f"InfoDialog UI construída com sucesso usando BaseDialog layout.")
-    
+        self.logger.debug(
+            "InfoDialog UI construída com sucesso usando BaseDialog layout."
+        )
 
     def _markdown_to_html(self, text: str) -> str:
         """

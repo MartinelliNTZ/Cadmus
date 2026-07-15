@@ -12,7 +12,7 @@ import tempfile
 class PointFieldsStep(BaseStep):
     """
     Step para calcular campos X, Y de pontos.
-    
+
     Padrão GenerateTrail:
     - Task salva em GPKG na worker thread
     - on_success() apenas copia PATH no contexto (rápido, não trava UI)
@@ -33,44 +33,41 @@ class PointFieldsStep(BaseStep):
             layer=context.get("layer"),
             field_map=context.get("field_map"),
             tool_key=context.get("tool_key"),
-            tmp_dir=tmp_dir
+            tmp_dir=tmp_dir,
         )
 
     def on_success(self, context: ExecutionContext, result):
         """
         Apply attribute mappings computed by the task on the MAIN THREAD.
-        Result expected shape: { 'updates': {fid: {field_name: value}}, 'missing_fields': [field_name,...] }
         """
-        logger = LogUtils(tool=context.get("tool_key"), class_name=self.__class__.__name__)
+        logger = LogUtils(
+            tool=context.get("tool_key"), class_name=self.__class__.__name__
+        )
         logger.info("PointFieldsStep.on_success: applying results")
 
         if not result or not isinstance(result, dict):
-            logger.error(
-                f"PointFieldsStep.on_success: resultado inválido: {result}"
-            )
+            logger.error(f"PointFieldsStep.on_success: resultado inválido: {result}")
             return
 
         layer = context.get("layer")
         if layer is None:
-            logger.error(
-                "PointFieldsStep.on_success: layer ausente no contexto"
-            )
+            logger.error("PointFieldsStep.on_success: layer ausente no contexto")
             return
 
         const_prec = 8
 
         # 1) Add missing fields into the layer edit buffer (do not save)
         missing = result.get("missing_fields", []) or []
-        started_editing = False
+
         if missing:
             if not layer.isEditable():
                 layer.startEditing()
-                started_editing = True
+
             for fname in missing:
-                logger.debug(
-                    f"PointFieldsStep: adicionando campo (edição) {fname}"
+                logger.debug(f"PointFieldsStep: adicionando campo (edição) {fname}")
+                layer.addAttribute(
+                    QgsField(fname, QVariant.Double, len=20, prec=const_prec)
                 )
-                layer.addAttribute(QgsField(fname, QVariant.Double, len=20, prec=const_prec))
             layer.updateFields()
 
         # 2) Build provider-compatible mapping (fid -> {field_index: value})
@@ -89,26 +86,22 @@ class PointFieldsStep(BaseStep):
 
         # 3) Apply in batches on main thread
         if not provider_updates:
-            logger.info(
-                "PointFieldsStep: nada a aplicar"
-            )
+            logger.info("PointFieldsStep: nada a aplicar")
             return
 
         items = list(provider_updates.items())
         total = len(items)
         chunk = 2000
-        
+
         # Bloquear signals da layer durante atualização em batch para evitar overhead
         layer.blockSignals(True)
         try:
             for i in range(0, total, chunk):
                 if context.is_cancelled():
-                    logger.info(
-                        "PointFieldsStep: cancelado durante aplicação"
-                    )
+                    logger.info("PointFieldsStep: cancelado durante aplicação")
                     break
 
-                batch_items = dict(items[i:i+chunk])
+                batch_items = dict(items[i: i + chunk])
                 # apply into edit buffer using changeAttributeValue
                 for fid, idx_map in batch_items.items():
                     for idx, val in idx_map.items():
@@ -119,13 +112,11 @@ class PointFieldsStep(BaseStep):
                                 f"PointFieldsStep: falha ao aplicar fid={fid} idx={idx} err={e}"
                             )
                 logger.debug(
-                    f"PointFieldsStep: applied edit-buffer batch {i}-{i+len(batch_items)} items={len(batch_items)}"
+                    f"Applied edit-buffer batch {i}-{i + len(batch_items)} items={len(batch_items)}"
                 )
                 QApplication.processEvents()
         finally:
             # Sempre desbloquear signals mesmo se houver erro ou cancelamento
             layer.blockSignals(False)
 
-        logger.info(
-            f"PointFieldsStep.on_success: aplicação em buffer concluída {len(provider_updates)} features"
-        )
+        logger.info(f"Aplicação em buffer concluída {len(provider_updates)} features")

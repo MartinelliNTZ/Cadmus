@@ -1,24 +1,17 @@
 # -*- coding: utf-8 -*-
-import os
-import tempfile
-from qgis.core import QgsVectorLayer, QgsField, QgsProject
-from qgis.PyQt.QtCore import QVariant
 from .BaseTask import BaseTask
-from ...utils.vector.VectorLayerAttributes import VectorLayerAttributes
-from ...utils.vector.VectorLayerSource import VectorLayerSource
-from ..config.LogUtils import LogUtils
 
 
 class PointFieldsTask(BaseTask):
     """
     Task assíncrona para calcular campos X e Y.
-    
+
     Modifica o arquivo original (sem criar cópias):
     1. Abre layer em modo edição
     2. Adiciona campos X e Y se não existem
     3. Calcula coordenadas no arquivo original
     4. Commita mudanças (salva direto no arquivo)
-    
+
     Resultado: on_success() apenas confirma (microsegundos, não trava UI)
     """
 
@@ -26,10 +19,8 @@ class PointFieldsTask(BaseTask):
         super().__init__("Calculando campos de pontos", tool_key)
         self.layer = layer
         self.field_map = field_map
-        
-        self.logger.debug(
-            f"PointFieldsTask.__init__: layer={layer.name()}"
-        )
+
+        self.logger.debug(f"PointFieldsTask.__init__: layer={layer.name()}")
 
     def _run(self) -> bool:
         if self.isCanceled():
@@ -51,9 +42,7 @@ class PointFieldsTask(BaseTask):
 
         for feat in self.layer.getFeatures():
             if self.isCanceled():
-                self.logger.info(
-                    "PointFieldsTask: cancelado durante cálculo"
-                )
+                self.logger.info("PointFieldsTask: cancelado durante cálculo")
                 return False
 
             count += 1
@@ -89,10 +78,10 @@ class PointFieldsTask(BaseTask):
         self.result = {
             "updates": updates,
             "missing_fields": [
-                fname for fname in set(self.field_map.values())
+                fname
+                for fname in set(self.field_map.values())
                 if fname not in [f.name() for f in self.layer.fields()]
-            ]
+            ],
         }
         self.setProgress(100)
         return True
-

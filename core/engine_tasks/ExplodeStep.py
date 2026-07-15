@@ -34,7 +34,7 @@ class ExplodeStep(BaseStep):
             layer=layer,
             output_path=input_path,
             decision="overwrite",
-            external_tool_key=tool_key
+            external_tool_key=tool_key,
         )
 
         if not input_path:
@@ -51,12 +51,12 @@ class ExplodeStep(BaseStep):
             )
         logger.debug(f"ExplodeStep: criando task para {input_path}")
         return ExplodeHugeLayerTask(
-            input_path=input_path,
-            output_path=exploded_path,
-            tool_key=tool_key
+            input_path=input_path, output_path=exploded_path, tool_key=tool_key
         )
 
     def on_success(self, context: ExecutionContext, result):
-        logger = LogUtils(tool=context.get("tool_key"), class_name=self.__class__.__name__)
+        logger = LogUtils(
+            tool=context.get("tool_key"), class_name=self.__class__.__name__
+        )
         logger.info(f"ExplodeStep.on_success: camada explodida salva em {result}")
         context.set("current_path", result)

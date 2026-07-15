@@ -2,12 +2,12 @@
 name=Cadmus
 description=Advanced automation and geospatial productivity tools for QGIS projects.
 about=Cadmus is a productivity plugin for QGIS focused on cartographic automation and geospatial workflows. It provides tools for batch layout export (PDF/PNG), mass text replacement in layouts, automatic loading of datasets from folders, vector attribute utilities, raster sampling, statistical analysis and interactive coordinate tools. The plugin also exposes algorithms in the Processing Toolbox to support automated workflows and batch processing.
-version=2.0.0
+version=3.0.0.2
 author=Matheus A.S. Martinelli
 email=martinelli.matheus11@gmail.com
 license=GPL-2.0-or-later
 qgisMinimumVersion=3.16
-qgisMaximumVersion=3.99
+qgisMaximumVersion=4.99
 category=Vector
 tags=layouts, automation, processing, vector, raster, statistics, drone
 icon=icon.png
@@ -15,12 +15,101 @@ plugin_dependencies=PyPDF2,Pillow
 hasProcessingProvider=yes
 experimental=False
 deprecated=False
+homepage=https://github.com/MartinelliNTZ/Cadmus
+repository=https://github.com/MartinelliNTZ/Cadmus
+tracker=https://github.com/MartinelliNTZ/Cadmus/issues
 
-changelog=    
+
+changelog=
+    3.0.0
+        - New tool: VectorToSvgPlugin - Exports the active vector layer to a styled SVG file
+        - New tool: CreateProjectPlugin - Creates a standard project structure (folders, basemap, CRS) in a new directory
+        - New tool: RasterWeightedAverage - Calculates a weighted average from multiple rasters (with resampling)
+        - New tool: GridGenerator - Generates a regular grid (lines or polygons) for a specified extent
+        - New tool: RasterOptimizer - Optimizes and compresses rasters (pyramids, tiling, compression)
+        - New tool: NdviCalculator - Calculates the NDVI vegetation index from RED and NIR bands
+        - New tool: RgbMosaicCreator - Creates an RGB mosaic from separate raster bands
+        - New tool: RgbStyleStandardizer - Applies a standardized RGB color style
+        - New tool: PathExtensionPlugin - Organizes and copies photos based on a flight path layer
+        - New tool: SaveTemporaryLayersPlugin - Saves temporary (memory) layers as permanent files
+        - New tool: NdreCalculator - Calculates the NDRE vegetation index from NIR and Red Edge bands
+        - New tool: GliCalculator - Calculates the GLI (Green Leaf Index) vegetation index
+        - New tool: RemoveKmlFieldsPlugin - Removes predefined fields from vector layers with a single click
+        - Fixed bugs in VectorFieldsCalculator
+        - Completely restructured the photo metadata extraction system in the DroneCoordinates tool
+        - Improved DroneCoordinates with better photo metadata handling, more reliable file matching, and higher performance
+        - Improved MRK file import
+        - Added drag-and-drop support for importing drone coordinates
+        - Layer names are now generated more intuitively based on the source file
+        - Import process now respects user preferences (photos and QML styles)
+        - Existing files are now loaded instead of being overwritten
+        - Fixed toolbar icon display issues
+        - Fixed dropdown button behavior
+        - Prevented duplicate menus and toolbars when reloading the plugin
+        - Fixed vector field calculations: geographic CRS now automatically computes both ellipsoidal and Cartesian modes, while projected CRS respects the mode selected in preferences
+        - Fixed speed formatting issues
+        - Multiple bug fixes across various tools
+        - Improvements to several Processing Provider tools
+        - Plugin is now partially translated into German
+        - Full support for Portuguese, English, and Spanish
+        - All dialogs and messages now automatically follow the language configured in QGIS
+        - Faster and more reliable plugin startup
+    2.3.0
+        - Partially translated to German
+        - Fixed vector field calculation: for geographic CRS, automatically calculates both modes (ellipsoidal and Cartesian); for projected CRS, respects the mode selected in preferences
+        - Fixed error in speed formatting
+        - New tool: RemoveKmlFieldsPlugin - removes specific fields from vector layers with one click
+        - Improvements in MRK file import:
+        - Drag and drop directly to import drone coordinates
+        - More intuitive layer names based on the source file
+        - Import respects user preferences (photos, QML styles)
+        - Existing files are loaded instead of being overwritten
+    2.2.0
+        - Toolbar now displays icons correctly
+        - Dropdown buttons work as expected
+        - Menus and toolbars no longer duplicate when reloading the plugin
+        - Full translation in Portuguese, Spanish and English
+        - All screens and messages now appear in the language configured in QGIS
+        - Plugin starts faster and more reliably
+    2.1.0
+        - Added tooltips in the toolbar for better usability and quick understanding of tools
+        - Introduced a new integrated help system with formatted instructions in the processing tools
+        - New tool: Raster Difference Statistics: Generates detailed HTML reports for raster comparisons
+        - Added option to show/hide help messages during processing (configurable in settings)
+        - Improved compatibility with different QGIS/Qt versions (more stable dialogs)
+        - New tool: Line Difference Between Points: Create lines from grouped points or between two layers
+        - New tool: Calculate Distance to Nearest Line: Adds distance fields to point layers based on nearest line features
+        - Improved consistency and behavior across processing tools
+        - Improved drone photo handling (more reliable file matching)
+        - General stability improvements and bug fixes
+    2.0.6
+        - Pep8 code style fixes
+    2.0.5
+        - Pep8 code style fixes
+    2.0.4
+        - Fixed bugs 
+        - Fixed errors
+        - Standardized all tools
+        - Improved documentation and code comments
+    2.0.3
+        - Fixed bugs 
+        - Fixed errors
+        - Standardized logging and error handling across all tools
+        - Improved documentation and code comments
+    2.0.2
+        - Fixed bugs 
+        - Fixed errors
+        - Standardized logging and error handling across all tools
+        - Improved documentation and code comments
+    2.0.1
+        - Fixed bugs 
+        - Fixed errors
+        - Standardized logging and error handling across all tools
+        - Improved documentation and code comments
     2.0.0
         - Plugin renamed to Cadmus
         - Improved dialogs and user interface
-        - Better logging and documentations
+        - Better logging and documentation
 
     1.7.0
         - Improved interface consistency across tools

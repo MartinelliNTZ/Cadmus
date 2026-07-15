@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from typing import Optional, List, Dict
-import math
 
 from qgis.core import (
     QgsVectorLayer,
@@ -11,7 +10,7 @@ from qgis.core import (
     QgsUnitTypes,
     QgsFeature,
     QgsGeometry,
-    QgsPoint
+    QgsPoint,
 )
 
 
@@ -33,8 +32,7 @@ class VectorLayerProjection:
     # ---------------------------------------------------------
     @staticmethod
     def convert_distance_to_layer_units(
-        layer: QgsVectorLayer,
-        distance_meters: float
+        layer: QgsVectorLayer, distance_meters: float
     ) -> float:
         """
         Converte uma distância em METROS
@@ -60,10 +58,7 @@ class VectorLayerProjection:
             return distance_meters / 111320.0
 
         # Outras unidades (feet, etc.)
-        factor = QgsUnitTypes.fromUnitToUnitFactor(
-            QgsUnitTypes.DistanceMeters,
-            unit
-        )
+        factor = QgsUnitTypes.fromUnitToUnitFactor(QgsUnitTypes.DistanceMeters, unit)
 
         return distance_meters * factor
 
@@ -72,8 +67,7 @@ class VectorLayerProjection:
     # ---------------------------------------------------------
     @staticmethod
     def reproject_layer(
-        layer: QgsVectorLayer,
-        target_crs: QgsCoordinateReferenceSystem
+        layer: QgsVectorLayer, target_crs: QgsCoordinateReferenceSystem
     ) -> Optional[QgsVectorLayer]:
         """
         Cria uma nova camada em memória reprojetada.
@@ -98,9 +92,7 @@ class VectorLayerProjection:
         new_layer.updateFields()
 
         transform = QgsCoordinateTransform(
-            source_crs,
-            target_crs,
-            QgsProject.instance().transformContext()
+            source_crs, target_crs, QgsProject.instance().transformContext()
         )
 
         feats = []
@@ -127,8 +119,7 @@ class VectorLayerProjection:
     # ---------------------------------------------------------
     @staticmethod
     def ensure_crs(
-        layer: QgsVectorLayer,
-        target_crs: QgsCoordinateReferenceSystem
+        layer: QgsVectorLayer, target_crs: QgsCoordinateReferenceSystem
     ) -> Optional[QgsVectorLayer]:
         """
         Garante que a camada esteja no CRS desejado.
@@ -148,12 +139,12 @@ class VectorLayerProjection:
     def is_geographic_crs(layer: QgsVectorLayer) -> bool:
         """
         Verifica se o CRS da camada é geográfico (WGS84, EPSG:4326, etc).
-        
+
         Parameters
         ----------
         layer : QgsVectorLayer
             Camada vetorial a verificar
-            
+
         Returns
         -------
         bool
@@ -161,9 +152,10 @@ class VectorLayerProjection:
         """
         if not layer or not layer.isValid():
             return False
-        
+
         crs = layer.crs()
         return crs.isGeographic()
+
     def get_layer_crs(self, layer, external_tool_key="untraceable"):
         """Obtém o CRS atual da camada."""
         pass
@@ -171,7 +163,10 @@ class VectorLayerProjection:
     def set_layer_crs(self, layer, target_crs, external_tool_key="untraceable"):
         """Define o CRS da camada sem reprojetar (apenas muda a definição)."""
         pass
-    def validate_crs_compatibility(self, layer1, layer2, external_tool_key="untraceable"):
+
+    def validate_crs_compatibility(
+        self, layer1, layer2, external_tool_key="untraceable"
+    ):
         """Verifica se duas camadas possuem CRS compatíveis ou próximos."""
         pass
 
@@ -179,15 +174,21 @@ class VectorLayerProjection:
         """Obtém o tipo de unidade de medida do CRS da camada (metros, graus, etc)."""
         pass
 
-    def convert_distance_unit(self, distance_value, from_unit, to_unit, external_tool_key="untraceable"):
+    def convert_distance_unit(
+        self, distance_value, from_unit, to_unit, external_tool_key="untraceable"
+    ):
         """Converte um valor de distância entre diferentes unidades de medida."""
         pass
 
-    def convert_area_unit(self, area_value, from_unit, to_unit, external_tool_key="untraceable"):
+    def convert_area_unit(
+        self, area_value, from_unit, to_unit, external_tool_key="untraceable"
+    ):
         """Converte um valor de área entre diferentes unidades de medida."""
         pass
 
-    def get_layer_extent_in_different_crs(self, layer, target_crs, external_tool_key="untraceable"):
+    def get_layer_extent_in_different_crs(
+        self, layer, target_crs, external_tool_key="untraceable"
+    ):
         """Calcula a extensão da camada quando projetada em um CRS diferente."""
         pass
 
@@ -215,13 +216,13 @@ class VectorLayerProjection:
         features: List[QgsFeature],
         source_crs: QgsCoordinateReferenceSystem,
         target_crs: QgsCoordinateReferenceSystem,
-        context
+        context,
     ) -> List[QgsFeature]:
         """
         Reprojeta uma lista de features entre CRS diferentes.
-        
+
         Movido de ProjectionHelper para consolidar lógica de projeção.
-        
+
         Parameters
         ----------
         features : List[QgsFeature]
@@ -232,7 +233,7 @@ class VectorLayerProjection:
             CRS de destino
         context : QgsProcessingContext
             Contexto de processamento com transformContext()
-            
+
         Returns
         -------
         List[QgsFeature]
@@ -242,9 +243,7 @@ class VectorLayerProjection:
             return features
 
         transform = QgsCoordinateTransform(
-            source_crs,
-            target_crs,
-            context.transformContext()
+            source_crs, target_crs, context.transformContext()
         )
         reproj = []
 
@@ -292,21 +291,20 @@ class VectorLayerProjection:
 
     @staticmethod
     def get_coordinate_info(
-        point: QgsPoint,
-        canvas_crs: QgsCoordinateReferenceSystem
+        point: QgsPoint, canvas_crs: QgsCoordinateReferenceSystem
     ) -> Dict:
         """
         Obtém informações de coordenada em múltiplos formatos.
-        
+
         Movido de crs_utils.get_coord_info() para consolidar lógica de projeção.
-        
+
         Parameters
         ----------
         point : QgsPoint
             Ponto em coordenadas do canvas
         canvas_crs : QgsCoordinateReferenceSystem
             CRS do canvas
-            
+
         Returns
         -------
         Dict
@@ -321,9 +319,7 @@ class VectorLayerProjection:
         # Transformar para WGS84
         crs_wgs = QgsCoordinateReferenceSystem("EPSG:4326")
         transform = QgsCoordinateTransform(
-            canvas_crs,
-            crs_wgs,
-            QgsProject.instance().transformContext()
+            canvas_crs, crs_wgs, QgsProject.instance().transformContext()
         )
         p_wgs = transform.transform(point)
 
@@ -337,9 +333,7 @@ class VectorLayerProjection:
         epsg_utm_sirgas = 31960 + zona
         crs_utm_sirgas = QgsCoordinateReferenceSystem(f"EPSG:{epsg_utm_sirgas}")
         transform_utm = QgsCoordinateTransform(
-            canvas_crs,
-            crs_utm_sirgas,
-            QgsProject.instance().transformContext()
+            canvas_crs, crs_utm_sirgas, QgsProject.instance().transformContext()
         )
         p_utm_sirgas = transform_utm.transform(point)
 
@@ -355,5 +349,5 @@ class VectorLayerProjection:
             "zona_num": zona,
             "zona_letra": letra,
             "hemisferio": hemisferio,
-            "epsg": epsg_utm_sirgas
+            "epsg": epsg_utm_sirgas,
         }

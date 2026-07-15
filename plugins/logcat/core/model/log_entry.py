@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Modelo de domínio para uma entrada de log.
 
@@ -13,7 +14,7 @@ import json
 @dataclass
 class LogEntry:
     """Representa uma única entrada de log JSONL."""
-    
+
     ts: Optional[str] = None
     level: str = "UNKNOWN"
     plugin: str = "Unknown"
@@ -25,13 +26,13 @@ class LogEntry:
     class_name: str = "UnknownClass"
     msg: str = ""
     data: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Campos calculados internamente
     line_number: int = 0  # Número da linha no arquivo original
-    raw_json: str = ""    # JSON original para debugging
-    
+    raw_json: str = ""  # JSON original para debugging
+
     @classmethod
-    def from_json_line(cls, line: str, line_number: int = 0) -> Optional['LogEntry']:
+    def from_json_line(cls, line: str, line_number: int = 0) -> Optional["LogEntry"]:
         """
         Parse uma linha JSON em um LogEntry.
         Tolerante a campos ausentes.
@@ -40,12 +41,12 @@ class LogEntry:
         line = line.strip()
         if not line:
             return None
-        
+
         try:
             obj = json.loads(line)
         except json.JSONDecodeError:
             return None
-        
+
         # Extrair campos com defaults seguros
         return cls(
             ts=obj.get("ts"),
@@ -60,9 +61,9 @@ class LogEntry:
             msg=obj.get("msg", ""),
             data=obj.get("data", {}),
             line_number=line_number,
-            raw_json=line
+            raw_json=line,
         )
-    
+
     def get_timestamp_dt(self) -> Optional[datetime]:
         """
         Parse o timestamp ISO para datetime.
@@ -74,22 +75,22 @@ class LogEntry:
             return datetime.fromisoformat(self.ts)
         except (ValueError, TypeError):
             return None
-    
+
     def get_short_message(self, max_length: int = 100) -> str:
         """
         Retorna mensagem truncada para exibição em tabela.
         """
         msg = self.msg.replace("\n", " ")
         if len(msg) > max_length:
-            return msg[:max_length - 3] + "..."
+            return msg[: max_length - 3] + "..."
         return msg
-    
+
     def get_full_message(self) -> str:
         """
         Retorna a mensagem completa, incluindo traceback se houver.
         """
         lines = [self.msg]
-        
+
         if "exception" in self.data:
             exc = self.data["exception"]
             lines.append("\n--- Exception Details ---")
@@ -100,7 +101,7 @@ class LogEntry:
             if "traceback" in exc:
                 lines.append("\n--- Traceback ---")
                 lines.append(exc["traceback"])
-        
+
         # Adicionar outros dados relevantes
         if self.data:
             exc_data = self.data.copy()
@@ -108,9 +109,9 @@ class LogEntry:
             if exc_data:
                 lines.append("\n--- Additional Data ---")
                 lines.append(json.dumps(exc_data, indent=2, ensure_ascii=False))
-        
+
         return "\n".join(lines)
-    
+
     def get_full_details(self) -> str:
         """
         Retorna todos os detalhes da entrada (para debug/cópia).
@@ -128,6 +129,6 @@ class LogEntry:
             "",
             f"Message:\n{self.get_full_message()}",
             "",
-            f"Raw JSON:\n{self.raw_json}"
+            f"Raw JSON:\n{self.raw_json}",
         ]
         return "\n".join(details)

@@ -5,26 +5,33 @@ from datetime import datetime
 from qgis.core import QgsLayoutItemLabel, QgsProject
 
 from ..core.config.LogUtils import LogUtils
+from .BaseUtil import BaseUtil
 
 
-class LayoutsUtils:
+class LayoutsUtils(BaseUtil):
     """
     Processamento de layouts do QGIS.
     Não depende de UI.
     """
 
+    TOOL_KEY_UNTRACEABLE: str = BaseUtil.TOOL_KEY_UNTRACEABLE
+
     @staticmethod
-    def _build_matcher(old_text: str, new_text: str,
-                       case_sensitive: bool,
-                       full_replace: bool):
+    def _build_matcher(
+        old_text: str, new_text: str, case_sensitive: bool, full_replace: bool
+    ):
         """
         Retorna função match_and_replace(text) -> str | None
         """
         if not full_replace:
             # Substituição parcial
             if case_sensitive:
+
                 def fn(text):
-                    return text.replace(old_text, new_text) if old_text in text else None
+                    return (
+                        text.replace(old_text, new_text) if old_text in text else None
+                    )
+
                 return fn
             else:
                 pattern = re.compile(re.escape(old_text), re.IGNORECASE)
@@ -34,18 +41,22 @@ class LayoutsUtils:
                     if low_old in text.lower():
                         return pattern.sub(new_text, text)
                     return None
+
                 return fn
         else:
             # Substituição total (modo chave)
             if case_sensitive:
+
                 def fn(text):
                     return new_text if old_text in text else None
+
                 return fn
             else:
                 low_old = old_text.lower()
 
                 def fn(text):
                     return new_text if low_old in text.lower() else None
+
                 return fn
 
     @staticmethod
@@ -55,7 +66,7 @@ class LayoutsUtils:
         old_text: str,
         new_text: str,
         case_sensitive: bool = True,
-        full_replace: bool = False
+        full_replace: bool = False,
     ) -> dict:
         """
         Executa replace em QgsLayoutItemLabel.
@@ -96,19 +107,12 @@ class LayoutsUtils:
                     total_changes += 1
                     layout_changes += 1
 
-                    logger.debug(
-                        f"[{layout_name}] '{original}' -> '{replaced}'"
-                    )
+                    logger.debug(f"[{layout_name}] '{original}' -> '{replaced}'")
 
             if layout_changes:
-                logger.debug(
-                    f"[{layout_name}] alterações: {layout_changes}"
-                )
+                logger.debug(f"[{layout_name}] alterações: {layout_changes}")
 
         logger.info(f"Total de substituições: {total_changes}")
         logger.info(f"Finalizado em {datetime.now().isoformat()}")
 
-        return {
-            "total_layouts": total_layouts,
-            "total_changes": total_changes
-        }
+        return {"total_layouts": total_layouts, "total_changes": total_changes}

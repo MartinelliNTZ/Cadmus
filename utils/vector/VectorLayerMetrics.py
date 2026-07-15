@@ -5,19 +5,19 @@ from qgis.core import QgsDistanceArea, QgsProject
 class VectorLayerMetrics:
     """
     Responsável pela leitura e cálculos espaciais de camadas vetoriais.
-    
+
     Escopo:
     - Calcular métricas geométricas (área, comprimento, perímetro)
     - Gerar estatísticas espaciais
     - Medir distâncias e ângulos
     - Analisar distribuição de feições
     - Cálculos de densidade e concentração
-    
+
     Responsabilidade Principal:
     - Fornecer cálculos e análises espaciais precisas
     - Garantir acurácia em medições
     - NÃO alterar dados
-    
+
     NÃO é Responsabilidade:
     - Transformar geometrias (use VectorLayerGeometry)
     - Reprojetar (use VectorLayerProjection)
@@ -49,7 +49,9 @@ class VectorLayerMetrics:
         """Calcula a área do retângulo envolvente (extent) da camada."""
         pass
 
-    def calculate_feature_count_by_area(self, layer, area_ranges, external_tool_key="untraceable"):
+    def calculate_feature_count_by_area(
+        self, layer, area_ranges, external_tool_key="untraceable"
+    ):
         """Agrupa e conta feições por intervalos de área especificados."""
         pass
 
@@ -61,11 +63,15 @@ class VectorLayerMetrics:
         """Calcula o centroide geral de todas as feições da camada."""
         pass
 
-    def calculate_distance_between_features(self, feature1, feature2, external_tool_key="untraceable"):
+    def calculate_distance_between_features(
+        self, feature1, feature2, external_tool_key="untraceable"
+    ):
         """Calcula a distância entre duas feições."""
         pass
 
-    def get_layer_density_statistics(self, layer, grid_size, external_tool_key="untraceable"):
+    def get_layer_density_statistics(
+        self, layer, grid_size, external_tool_key="untraceable"
+    ):
         """Calcula estatísticas de densidade de feições em uma grade."""
         pass
 
@@ -74,10 +80,12 @@ class VectorLayerMetrics:
         pass
 
     @staticmethod
-    def calculate_line_length(layer, field_name, use_ellipsoidal=True, precision: int = 4):
+    def calculate_line_length(
+        layer, field_name, use_ellipsoidal=True, precision: int = 4, tool_key=None
+    ):
         """
         Calcula comprimento de linhas (elipsoidal ou cartesiano).
-        
+
         Parameters
         ----------
         layer : QgsVectorLayer
@@ -88,37 +96,36 @@ class VectorLayerMetrics:
             Se True usa modelo elipsoidal, False usa cartesiano (padrão: True)
         precision : int
             Casas decimais para arredondamento e definição de campo
+        tool_key : str, optional
+            ToolKey da ferramenta chamadora para rastreamento em logs
         """
         if not layer or not layer.isValid():
             return
-            
+
         if not layer.isEditable():
             layer.startEditing()
-        
+
         from qgis.core import QgsField
         from qgis.PyQt.QtCore import QVariant
-        
+
         # Criar campo se não existir
         if layer.fields().lookupField(field_name) == -1:
             layer.addAttribute(
                 QgsField(field_name, QVariant.Double, len=16, prec=precision)
             )
             layer.updateFields()
-        
+
         if use_ellipsoidal:
             # Configurar medidor elipsoidal
             d = QgsDistanceArea()
-            d.setSourceCrs(
-                layer.crs(),
-                QgsProject.instance().transformContext()
-            )
-            
+            d.setSourceCrs(layer.crs(), QgsProject.instance().transformContext())
+
             ellipsoid = layer.crs().ellipsoidAcronym()
             if not ellipsoid:
                 ellipsoid = "WGS84"
-            
+
             d.setEllipsoid(ellipsoid)
-            
+
             # Calcular comprimento elipsoidal
             for feat in layer.getFeatures():
                 geom = feat.geometry()
@@ -136,13 +143,15 @@ class VectorLayerMetrics:
                     layer.updateFeature(feat)
 
     @staticmethod
-    def calculate_polygon_area(layer, field_name, use_ellipsoidal=True, precision: int = 4):
+    def calculate_polygon_area(
+        layer, field_name, use_ellipsoidal=True, precision: int = 4, tool_key=None
+    ):
         """
         Calcula área de polígonos em hectares (elipsoidal ou cartesiano).
-        
+
         precision : int
             Casas decimais para arredondamento e definição de campo
-        
+
         Parameters
         ----------
         layer : QgsVectorLayer
@@ -151,37 +160,36 @@ class VectorLayerMetrics:
             Nome do campo para armazenar área em hectares
         use_ellipsoidal : bool
             Se True usa modelo elipsoidal, False usa cartesiano (padrão: True)
+        tool_key : str, optional
+            ToolKey da ferramenta chamadora para rastreamento em logs
         """
         if not layer or not layer.isValid():
             return
-            
+
         if not layer.isEditable():
             layer.startEditing()
-        
+
         from qgis.core import QgsField
         from qgis.PyQt.QtCore import QVariant
-        
+
         # Criar campo se não existir
         if layer.fields().lookupField(field_name) == -1:
             layer.addAttribute(
                 QgsField(field_name, QVariant.Double, len=16, prec=precision)
             )
             layer.updateFields()
-        
+
         if use_ellipsoidal:
             # Configurar medidor elipsoidal
             d = QgsDistanceArea()
-            d.setSourceCrs(
-                layer.crs(),
-                QgsProject.instance().transformContext()
-            )
-            
+            d.setSourceCrs(layer.crs(), QgsProject.instance().transformContext())
+
             ellipsoid = layer.crs().ellipsoidAcronym()
             if not ellipsoid:
                 ellipsoid = "WGS84"
-            
+
             d.setEllipsoid(ellipsoid)
-            
+
             # Calcular área elipsoidal
             for feat in layer.getFeatures():
                 geom = feat.geometry()

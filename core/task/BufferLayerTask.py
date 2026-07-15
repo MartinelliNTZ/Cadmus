@@ -1,9 +1,7 @@
 from .BaseTask import BaseTask
 from .TaskFeedback import TaskFeedback
-from ..config.LogUtils import LogUtils
-from ...utils.vector.VectorLayerGeometry import VectorLayerGeometry
-import time
 
+from ...utils.vector.VectorLayerGeometry import VectorLayerGeometry
 
 
 class BufferLayerTask(BaseTask):
@@ -23,7 +21,7 @@ class BufferLayerTask(BaseTask):
         join_style: int = 1,
         miter_limit: float = 2.0,
         dissolve: bool = False,
-        tool_key: str
+        tool_key: str,
     ):
         super().__init__("Gerando buffer (heavy)", tool_key)
 
@@ -37,15 +35,13 @@ class BufferLayerTask(BaseTask):
         self.dissolve = dissolve
 
         self.logger.debug(
-            f"BufferLayerTask initialized: {self.input_path} -> {self.output_path}, distance={self.distance}"
+            f"BufferLayerTask initialized: {input_path} -> {output_path}, distance={distance}"
         )
 
     def _run(self) -> bool:
 
         if self.isCanceled():
-            self.logger.info(
-                "BufferLayerTask canceled before start"
-            )
+            self.logger.info("BufferLayerTask canceled before start")
             return False
 
         self.logger.info(
@@ -64,26 +60,19 @@ class BufferLayerTask(BaseTask):
                 miter_limit=self.miter_limit,
                 dissolve=self.dissolve,
                 external_tool_key=self.tool_key,
-                feedback = feedback,
+                feedback=feedback,
             )
-            #            time.sleep(10)
 
         except Exception as e:
-            self.logger.critical(
-                f"Erro no buffer: {str(e)}"
-            )
+            self.logger.critical(f"Erro no buffer: {str(e)}")
             raise
 
         if self.isCanceled():
-            self.logger.info(
-                "BufferLayerTask canceled after execution"
-            )
+            self.logger.info("BufferLayerTask canceled after execution")
             return False
 
         self.result = self.output_path
 
-        self.logger.info(
-            "BufferLayerTask completed successfully"
-        )
+        self.logger.info("BufferLayerTask completed successfully")
 
         return True

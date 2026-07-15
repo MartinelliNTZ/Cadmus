@@ -1,6 +1,7 @@
 from qgis.core import QgsTask, QgsMessageLog, Qgis
 from ..config.LogUtils import LogUtils
 
+
 class BaseTask(QgsTask):
     """
     Classe base para todas as tasks do plugin.
@@ -46,11 +47,7 @@ class BaseTask(QgsTask):
         if callable(self.on_error):
             self.on_error(self.exception)
         else:
-            QgsMessageLog.logMessage(
-                str(self.exception),
-                self.tool_key,
-                Qgis.Critical
-            )
+            QgsMessageLog.logMessage(str(self.exception), self.tool_key, Qgis.Critical)
 
     def _run(self) -> bool:
         raise NotImplementedError

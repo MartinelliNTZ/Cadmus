@@ -1,9 +1,7 @@
-import processing
-from qgis.core import QgsVectorLayer
 from .BaseTask import BaseTask
-from ..config.LogUtils import LogUtils
+
 from ...utils.vector.VectorLayerGeometry import VectorLayerGeometry
-import time
+
 
 class ExplodeHugeLayerTask(BaseTask):
     """
@@ -11,27 +9,25 @@ class ExplodeHugeLayerTask(BaseTask):
     Seguro para milhões de feições.
     """
 
-    def __init__(
-        self,
-        *,
-        input_path: str,
-        output_path: str,
-        tool_key: str
-    ):
+    def __init__(self, *, input_path: str, output_path: str, tool_key: str):
         super().__init__("Explodindo linhas (heavy)", tool_key)
         self.input_path = input_path
         self.output_path = output_path
-        self.logger.debug(f"ExplodeHugeLayerTask initialized for {self.input_path} -> {self.output_path}")
+        self.logger.debug(
+            f"ExplodeTask initialized for {self.input_path} -> {self.output_path}"
+        )
 
     def _run(self) -> bool:
         if self.isCanceled():
             self.logger.info("ExplodeHugeLayerTask canceled before start")
             return False
-        self.logger.info(f"Starting explode task for {self.input_path} -> {self.output_path}")
+        self.logger.info(
+            f"Starting explode task for {self.input_path} -> {self.output_path}"
+        )
         ok = VectorLayerGeometry.explode_lines_to_path(
             input_path=self.input_path,
             output_path=self.output_path,
-            external_tool_key=self.tool_key
+            external_tool_key=self.tool_key,
         )
 
         if not ok:

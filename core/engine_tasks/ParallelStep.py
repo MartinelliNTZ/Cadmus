@@ -48,15 +48,15 @@ class ParallelStep(BaseStep):
         # pelo _ParallelGroupTask; aqui podemos adicionar agregações
         try:
             context.set("parallel_result", result)
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"ParallelStep.on_success error: {e}")
 
     def on_error(self, context: ExecutionContext, exception: Exception) -> None:
         # Já foi coletado pelo grupo; apenas registre
         try:
             context.add_error(exception)
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"ParallelStep.on_error error: {e}")
 
 
 class _ParallelGroupTask(QgsTask):
@@ -72,7 +72,12 @@ class _ParallelGroupTask(QgsTask):
     - Em caso de sucesso, chama `self.on_success` com dict {step_name: result}
     """
 
-    def __init__(self, steps: List[BaseStep], context: ExecutionContext, description: str = "ParallelGroup"):
+    def __init__(
+        self,
+        steps: List[BaseStep],
+        context: ExecutionContext,
+        description: str = "ParallelGroup",
+    ):
         super().__init__(description, QgsTask.CanCancel)
         self._steps = steps
         self._context = context
@@ -83,7 +88,9 @@ class _ParallelGroupTask(QgsTask):
         self._error: Optional[Exception] = None
         self._done_event = threading.Event()
         self._subtasks: List[QgsTask] = []
-        self.logger = LogUtils(tool="ParallelGroupTask", class_name="_ParallelGroupTask")
+        self.logger = LogUtils(
+            tool="ParallelGroupTask", class_name="_ParallelGroupTask"
+        )
 
         # callbacks that will be set by engine
         self.on_success = None
@@ -115,8 +122,9 @@ class _ParallelGroupTask(QgsTask):
                             # permite que o próprio sub-step aplique sua lógica
                             try:
                                 s.on_success(self._context, result)
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                self.logger.error(f"substep on_success error: {e}")
+
                             with self._lock:
                                 self._results[s.name()] = result
                                 self._pending -= 1
@@ -125,6 +133,7 @@ class _ParallelGroupTask(QgsTask):
                         except Exception as e:
                             # registro local
                             self.logger.error(f"subtask success handler error: {e}")
+
                     return _on_success
 
                 def make_error_handler(s, t):
@@ -132,8 +141,9 @@ class _ParallelGroupTask(QgsTask):
                         try:
                             try:
                                 s.on_error(self._context, exc)
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                self.logger.error(f"substep on_error error: {e}")
+
                             with self._lock:
                                 # registra primeira exceção
                                 if self._error is None:
@@ -142,11 +152,15 @@ class _ParallelGroupTask(QgsTask):
                                 for st in self._subtasks:
                                     try:
                                         st.cancel()
-                                    except Exception:
-                                        pass
+                                    except Exception as e:
+                                        self.logger.error(
+                                            f"Error cancelling subtask: {e}"
+                                        )
+
                                 self._done_event.set()
                         except Exception as e:
                             self.logger.error(f"subtask error handler error: {e}")
+
                     return _on_error
 
                 # Attach handlers
@@ -156,9 +170,8 @@ class _ParallelGroupTask(QgsTask):
                 # Forward subtask progress to group progress
                 try:
                     task.progressChanged.connect(self._on_subtask_progress)
-                except Exception:
-                    pass
-
+                except Exception as e:
+                    self.logger.error(f"Failed connecting progressChanged: {e}")
                 self._pending += 1
 
         # Se erro na criação das tasks
@@ -167,6 +180,7 @@ class _ParallelGroupTask(QgsTask):
 
         # Agenda subtasks
         for st in list(self._subtasks):
+
             try:
                 QgsApplication.taskManager().addTask(st)
             except Exception as e:
@@ -178,8 +192,11 @@ class _ParallelGroupTask(QgsTask):
                     for s in self._subtasks:
                         try:
                             s.cancel()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error cancelling scheduled subtask: {e}"
+                            )
+
                     self._done_event.set()
                 break
 
@@ -190,8 +207,10 @@ class _ParallelGroupTask(QgsTask):
                 for st in list(self._subtasks):
                     try:
                         st.cancel()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error cancelling subtask during shutdown: {e}"
+                        )
                 self._done_event.set()
                 break
             QgsApplication.processEvents()
@@ -211,10 +230,10 @@ class _ParallelGroupTask(QgsTask):
             group_progress = min(100.0, float(value) / total)
             try:
                 self.setProgress(int(group_progress))
-            except Exception:
-                pass
-        except Exception:
-            pass
+            except Exception as e:
+                self.logger.error(f"_on_subtask_progress setProgress error: {e}")
+        except Exception as e:
+            self.logger.error(f"_on_subtask_progress error: {e}")
 
     def finished(self, success: bool):
         # Se sucesso, chama on_success com dicionário de resultados
@@ -227,7 +246,11 @@ class _ParallelGroupTask(QgsTask):
             return
 
         # Em caso de erro, prioriza a primeira exceção coletada
-        exc = self._error if self._error is not None else Exception("ParallelGroup failed")
+        exc = (
+            self._error
+            if self._error is not None
+            else Exception("ParallelGroup failed")
+        )
         if callable(self.on_error):
             try:
                 self.on_error(exc)

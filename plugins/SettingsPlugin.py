@@ -1,224 +1,463 @@
 # -*- coding: utf-8 -*-
-"""
-SettingsPlugin - Configurações do Cadmus
+from qgis.core import QgsCoordinateReferenceSystem
 
-Exibe preferências do aplicativo e configurações de cálculo vetorial.
-"""
-
-from qgis.PyQt.QtWidgets import QLabel, QMessageBox
-from qgis.PyQt.QtGui import QDesktopServices
-from qgis.PyQt.QtCore import QUrl, Qt
-
+from ..utils.StringManager import StringManager
 from ..plugins.BasePlugin import BasePluginMTL
-from ..utils.Preferences import load_tool_prefs, save_tool_prefs
+from ..utils.Preferences import Preferences
 from ..utils.ToolKeys import ToolKey
+from ..utils.ExplorerUtils import ExplorerUtils
 from ..core.ui.WidgetFactory import WidgetFactory
-from ..core.config.LogUtils import LogUtils
-from ..utils.StringUtils import StringUtils
+from ..i18n.TranslationManager import STR, TranslationManager
+from ..utils.QgisMessageUtil import QgisMessageUtil
+from ..core.config.MenuManager import MenuManager
 
 
 class SettingsPlugin(BasePluginMTL):
     """
     Plugin de configurações do Cadmus.
-    
+
     Permite ao usuário:
     - Acessar preferências do aplicativo
     - Configurar método de cálculo vetorial (Elipsoidal, Cartesiana, Ambos)
     """
 
-    CALCULATION_METHODS = ["Elipsoidal", "Cartesiana", "Ambos"]
+    CALCULATION_METHODS = [
+        STR.ELLIPSOIDAL,
+        STR.CARTESIAN,
+        STR.BOTH,
+    ]
+    DEFAULT_CRS_AUTHID = "EPSG:4326"
+    AUTO_SAVE_PREFS_ON_CLOSE = False
+    system_preferences = {}
+    prefer_VectorFields = {}
+    toolbar_category_checks = {}
 
     def __init__(self, iface):
         super().__init__(iface.mainWindow())
         self.iface = iface
-        self.init(ToolKey.SETTINGS, "SettingsPlugin")
+        self.init(ToolKey.SETTINGS, "SettingsPlugin", load_system_prefs=True)
         self.logger.info("SettingsPlugin inicializado")
 
     def _build_ui(self, **kwargs):
         """Constrói a interface de configurações."""
         self.logger.debug("Construindo interface de configurações")
-        
+
         super()._build_ui(
-            title="Configurações Cadmus",
-            icon_path="system.ico",
-            instructions_file="settings_help.md"
+            title=STR.SETTINGS_TITLE,
+            icon_path="settings.ico",
         )
-        
+
         self.logger.info("Construindo componentes de interface")
 
-        # ========== SEÇÃO 1: Preferências do App ==========
-        prefs_label = QLabel("📋 Preferências do Aplicativo")
-        prefs_label.setStyleSheet("font-weight: bold; font-size: 11pt;")
-
-        # Link clicável para preferências
-        pref_link = QLabel(
-            '<a href="open_prefs" style="color: #0066cc; text-decoration: underline;">Abrir Pasta de Preferências</a>'
+        pref_button_layout, self.pref_button = WidgetFactory.create_simple_button(
+            text=STR.OPEN_PREFERENCES_FOLDER,
+            parent=self,
+            spacing=2,
         )
-        pref_link.setOpenExternalLinks(False)
-        pref_link.setCursor(Qt.PointingHandCursor)
-        pref_link.linkActivated.connect(self._on_open_preferences)
+        self.pref_button.clicked.connect(self._open_preferences_folder)
 
-        self.logger.debug("Link de preferências adicionado")
+        self.logger.debug("Botão de preferências adicionado")
 
-        # ========== SEÇÃO 2: Método de Cálculo Vetorial ==========
         calc_layout, self.radio_calc = WidgetFactory.create_radio_button_grid(
             items=self.CALCULATION_METHODS,
             columns=3,
-            title="⚙️ Método de Cálculo Vetorial",
+            title=f"⚙️ {STR.VECTOR_CALCULATION_METHOD}",
             checked_index=0,
             tool_key=ToolKey.SETTINGS,
-            separator_top=True,
-            separator_bottom=True,
-            parent=self
+            separator_top=False,
+            separator_bottom=False,
+            parent=self,
         )
         self.logger.debug("Widget de cálculo vetorial adicionado")
-        
-        # ========== SEÇÃO 3: Precisão para campos vetoriais ==========
+
+        langs = StringManager.AVAILABLE_LANGUAGES
+        selected_lang = self.system_preferences.get("plugin_language", "none")
+        lang_layout, self.lang_selector = WidgetFactory.create_dropdown_selector(
+            title=f"⚙️ {STR.PLUGIN_LANGUAGE}",
+            options_dict=langs,
+            selected_key=selected_lang,
+            separator_top=False,
+            separator_bottom=False,
+            parent=self,
+        )
+
+        crs_layout, self.crs_selector = WidgetFactory.create_crs_selector(
+            title=STR.DEFAULT_CRS,
+            tool_key=ToolKey.SETTINGS,
+            default_auth_id=self.system_preferences.get(
+                "default_crs_authid", self.DEFAULT_CRS_AUTHID
+            ),
+            separator_top=False,
+            separator_bottom=False,
+            parent=self,
+        )
+        self.logger.debug("Widget exclusivo de selecao de SRC adicionado")
+
         prec_layout, self.spin_precision = WidgetFactory.create_double_spin_input(
-            "🎯 Precisão de campos vetoriais (casas decimais):",
+            f"🎯 {STR.VECTOR_FIELDS_PRECISION}",
             decimals=0,
             step=1,
             minimum=0,
             maximum=10,
             value=2,
-            separator_top=True,
+            separator_top=False,
             separator_bottom=False,
         )
         self.logger.debug("Widget de precisão de campos vetoriais adicionado")
 
-        # ========== SEÇÃO 4: Limiar de processamento assíncrono ==========
-        # Agora o valor é o número máximo de feições que podem ser processadas
-        # de forma síncrona; tudo acima irá disparar execução em segundo plano.
         thresh_layout, self.spin_threshold = WidgetFactory.create_double_spin_input(
-            "📦 Limiar assíncrono (nº de feições):",
+            f"📦 {STR.ASYNC_THRESHOLD}",
             decimals=0,
             step=1,
             minimum=1,
-            maximum=100000000,  # valor alto para não limitar demais
+            maximum=100000000,
             value=1000,
             separator_top=False,
-            separator_bottom=True,
+            separator_bottom=False,
         )
         self.logger.debug("Widget de limiar assíncrono por feições adicionado")
 
-        # ========== BOTÕES DE AÇÃO ==========
-        buttons_layout, self.action_buttons = WidgetFactory.create_bottom_action_buttons(
-            parent=self,
-            run_callback=self.execute_tool,
-            close_callback=self.close,
-            info_callback=self.show_info_dialog,
-            tool_key=ToolKey.SETTINGS,
-            run_text = "Salvar"
+        toolbar_layout, self.toolbar_category_checks = (
+            WidgetFactory.create_checkbox_grid(
+                options_dict=MenuManager.toolbar_category_options(),
+                items_per_row=3,
+                checked_by_default=True,
+                title=STR.TOOLBAR_VISIBLE_CATEGORIES,
+                separator_top=False,
+                separator_bottom=False,
+            )
         )
-        
-        # ========== ADICIONAR TODOS OS ITEMS DE UMA VEZ ==========
-        # Importante: adicionar items em uma ÚNICA chamada a add_items()
-        # para evitar reparentings repetidos que destroem widgets internos
-        self.layout.add_items([
-            prefs_label,
-            pref_link,
-            calc_layout,
-            prec_layout,
-            thresh_layout,
-            buttons_layout
-        ])
+        self.logger.debug("Grid de categorias visiveis da toolbar adicionado")
+
+        geral_layout, self.geral_collapsable = (
+            WidgetFactory.create_collapsible_parameters(
+                parent=self,
+                title=STR.GENERAL,
+                expanded_by_default=True,
+                separator_top=False,
+                separator_bottom=False,
+            )
+        )
+
+        projects_layout, self.project_folder_selector = (
+            WidgetFactory.create_path_selector(
+                title=STR.PROJECTS_FOLDER,
+                mode="folder",
+                parent=self,
+                separator_top=False,
+                separator_bottom=False,
+            )
+        )
+
+        self.geral_collapsable.add_content_layout(projects_layout)
+        self.geral_collapsable.add_content_layout(crs_layout)
+        self.geral_collapsable.add_content_layout(lang_layout)
+        self.geral_collapsable.add_content_layout(prec_layout)
+        self.geral_collapsable.add_content_layout(thresh_layout)
+        self.geral_collapsable.add_content_layout(pref_button_layout)
+
+        lic_layout, self.lic_btn = WidgetFactory.create_simple_button(
+            text="_",
+            parent=self,
+            spacing=6,
+        )
+        self.lic_btn.clicked.connect(self._open_lic_dialog)
+        self.geral_collapsable.add_content_layout(lic_layout)
+
+        self.geral_collapsable.add_content_layout(toolbar_layout)
+
+        calc_layout_collapsible, self.calc_collapsable = (
+            WidgetFactory.create_collapsible_parameters(
+                parent=self,
+                title=STR.VECTOR_CALCULATIONS_PLUGIN,
+                expanded_by_default=False,
+                separator_top=False,
+                separator_bottom=False,
+            )
+        )
+        self.calc_collapsable.add_content_layout(calc_layout)
+
+        field_names_layout, self.area_fields_inputs = (
+            WidgetFactory.create_input_fields_widget(
+                fields_dict={
+                    "cartesian_suffix": {
+                        "title": STR.CARTESIAN_SUFFIX,
+                        "type": "text",
+                        "default": "",
+                    },
+                    "ellipsoidal_suffix": {
+                        "title": STR.ELLIPSOIDAL_SUFFIX,
+                        "type": "text",
+                        "default": "_eli",
+                    },
+                },
+                parent=self,
+                separator_top=False,
+                separator_bottom=False,
+            )
+        )
+        self.calc_collapsable.add_content_layout(field_names_layout)
+
+        buttons_layout, self.action_buttons = (
+            WidgetFactory.create_bottom_action_buttons(
+                parent=self,
+                run_callback=self.execute_tool,
+                close_callback=self.close,
+                info_callback=self.show_info_dialog,
+                tool_key=ToolKey.SETTINGS,
+                run_text=STR.SAVE,
+            )
+        )
+
+        self.layout.add_items(
+            [
+                geral_layout,
+                calc_layout_collapsible,
+                buttons_layout,
+            ]
+        )
         self.logger.info("Interface de configurações construída com sucesso")
 
     def _load_prefs(self):
         """Carrega preferências salvas."""
         self.logger.debug("Carregando preferências")
-        self.preferences = load_tool_prefs(ToolKey.SETTINGS)
+        self.prefer_VectorFields = Preferences.load_tool_prefs(ToolKey.VECTOR_FIELDS)
 
-        # Carregar método de cálculo selecionado
-        calc_method = self.preferences.get('calculation_method', 'Elipsoidal')
-        try:
-            idx = self.CALCULATION_METHODS.index(calc_method)
-            self.radio_calc.set_selected_index(idx)
+        calc_method = self.system_preferences.get("calculation_method", STR.ELLIPSOIDAL)
+        if calc_method in self.CALCULATION_METHODS:
+            self.radio_calc.set_selected_index(
+                self.CALCULATION_METHODS.index(calc_method)
+            )
             self.logger.debug(f"Método de cálculo carregado: {calc_method}")
-        except (ValueError, IndexError):
-            self.logger.warning(f"Método de cálculo inválido: {calc_method}, usando padrão")
+        else:
+            self.logger.warning(
+                f"Método de cálculo inválido: {calc_method}, usando padrão"
+            )
             self.radio_calc.set_selected_index(0)
 
-        # Carregar limiar assíncrono (número de feições)
-        # suporte retrocompatível: se usuário ainda tiver threshold em bytes, avisar e usar padrão
-        if 'async_threshold_features' in self.preferences:
-            thresh_feats = self.preferences.get('async_threshold_features', 1000)
+        selected_language = self.system_preferences.get("plugin_language", "none")
+        if selected_language in StringManager.AVAILABLE_LANGUAGES:
+            self.lang_selector.set_selected_key(selected_language)
+            self.logger.debug(f"Idioma selecionado carregado: {selected_language}")
         else:
-            old_bytes = self.preferences.get('async_threshold_bytes')
-            if old_bytes is not None:
-                self.logger.warning("Preferência antiga 'async_threshold_bytes' encontrada, substituindo por limite de feições padrão")
-            thresh_feats = 1000
-        try:
-            self.spin_threshold.setValue(int(thresh_feats))
-            self.logger.debug(f"Limiar assíncrono carregado: {thresh_feats} feições")
-        except Exception:
-            self.logger.warning(f"Erro ao carregar limiar assíncrono: {thresh_feats}")
+            self.logger.warning(f"Idioma inválido: {selected_language}, usando padrão")
+            self.lang_selector.set_selected_key("pt_BR")
 
-        # Carregar precisão de campos vetoriais
-        prec = self.preferences.get('vector_field_precision', 2)
-        try:
-            self.spin_precision.setValue(int(prec))
-            self.logger.debug(f"Precisão de campos vetoriais carregada: {prec}")
-        except Exception:
-            self.logger.warning(f"Erro ao carregar precisão de campos vetoriais: {prec}")
+        selected_crs_authid = self.system_preferences.get(
+            "default_crs_authid", self.DEFAULT_CRS_AUTHID
+        )
+        if not self.crs_selector.set_crs_authid(selected_crs_authid):
+            self.logger.warning(f"SRC invalido: {selected_crs_authid}, usando padrao")
+            self.crs_selector.set_crs_authid(self.DEFAULT_CRS_AUTHID)
+        self.logger.debug(f"SRC padrao carregado: {self.crs_selector.get_crs_authid()}")
+
+        if "async_threshold_features" in self.system_preferences:
+            thresh_feats = self.system_preferences.get("async_threshold_features", 1000)
+        else:
+            old_bytes = self.system_preferences.get("async_threshold_bytes")
+            if old_bytes is not None:
+                self.logger.warning(
+                    "Preferência antiga 'async_threshold_bytes' encontrada, substituindo por limite de feições padrão"
+                )
+            thresh_feats = 1000
+
+        thresh_value = (
+            int(thresh_feats)
+            if isinstance(thresh_feats, int)
+            else (int(thresh_feats) if str(thresh_feats).isdigit() else 1000)
+        )
+        self.spin_threshold.setValue(thresh_value)
+        self.logger.debug(f"Limiar assíncrono carregado: {thresh_value} feições")
+
+        prec = self.system_preferences.get("vector_field_precision", 2)
+        precision_value = (
+            int(prec)
+            if isinstance(prec, int)
+            else (int(prec) if str(prec).isdigit() else 2)
+        )
+        self.spin_precision.setValue(precision_value)
+        self.logger.debug(f"Precisão de campos vetoriais carregada: {precision_value}")
+
+        self.area_fields_inputs.set_values(
+            {
+                "cartesian_suffix": self.prefer_VectorFields.get(
+                    "cartesian_suffix", ""
+                ),
+                "ellipsoidal_suffix": self.prefer_VectorFields.get(
+                    "ellipsoidal_suffix", "_eli"
+                ),
+            }
+        )
+
+        toolbar_visibility = MenuManager.normalize_toolbar_category_visibility(
+            self.system_preferences.get(MenuManager.TOOLBAR_VISIBILITY_PREF_KEY)
+        )
+        for category, checkbox in self.toolbar_category_checks.items():
+            checkbox.setChecked(toolbar_visibility.get(category, True))
+
+        project_folder = self.preferences.get("projects_folder", "")
+        if project_folder:
+            self.project_folder_selector.set_path(project_folder)
+
+        self.calc_collapsable.set_expanded(self.preferences.get("calc_expanded", False))
+        self.geral_collapsable.set_expanded(
+            self.preferences.get("geral_expanded", True)
+        )
 
     def _save_prefs(self):
         """Salva preferências."""
         self.logger.debug("Salvando preferências")
-        
-        # Salvar método de cálculo selecionado
-        selected_text = self.radio_calc.get_selected_text()
-        self.preferences['calculation_method'] = selected_text
+        self.preferences["calc_expanded"] = self.calc_collapsable.is_expanded()
+        self.preferences["geral_expanded"] = self.geral_collapsable.is_expanded()
 
-        # Salvar limiar assíncrono (número de feições)
+        selected_text = self.radio_calc.get_selected_text()
+        self.system_preferences["calculation_method"] = selected_text
+        selected_crs = self.crs_selector.get_crs()
+        if not selected_crs or not selected_crs.isValid():
+            selected_crs = QgsCoordinateReferenceSystem(self.DEFAULT_CRS_AUTHID)
+            self.crs_selector.set_crs(selected_crs)
+        self.system_preferences["default_crs_authid"] = selected_crs.authid()
+        self.logger.debug(f"SRC padrao salvo: {selected_crs.authid()}")
+
         feats_value = int(self.spin_threshold.value())
-        self.preferences['async_threshold_features'] = feats_value
+        self.system_preferences["async_threshold_features"] = feats_value
         self.logger.debug(f"Limiar assíncrono por feições salvo: {feats_value} feições")
 
-        # Salvar precisão de campos vetoriais
         precision_val = int(self.spin_precision.value())
-        self.preferences['vector_field_precision'] = precision_val
+        self.system_preferences["vector_field_precision"] = precision_val
         self.logger.debug(f"Precisão de campos vetoriais salva: {precision_val} casas")
 
-        save_tool_prefs(ToolKey.SETTINGS, self.preferences)
-        self.logger.info(f"Preferências salvas: cálculo={selected_text}")
+        selected_language = self.lang_selector.get_selected_key()
+        if selected_language != "none":
+            self.system_preferences["plugin_language"] = selected_language
+            self.logger.debug(f"Idioma selecionado salvo: {selected_language}")
+        else:
+            if "plugin_language" in self.system_preferences:
+                del self.system_preferences["plugin_language"]
+                self.logger.debug("Idioma selecionado removido para auto-detectar")
+
+        toolbar_visibility = {
+            category: bool(checkbox.isChecked())
+            for category, checkbox in self.toolbar_category_checks.items()
+        }
+
+        # Detecta se houve alteração na visibilidade para disparar refresh dinâmico
+        old_visibility = self.system_preferences.get(
+            MenuManager.TOOLBAR_VISIBILITY_PREF_KEY, {}
+        )
+        needs_toolbar_refresh = old_visibility != toolbar_visibility
+
+        self.system_preferences[MenuManager.TOOLBAR_VISIBILITY_PREF_KEY] = (
+            toolbar_visibility
+        )
+        self.logger.debug(
+            f"Categorias visiveis na toolbar salvas: {toolbar_visibility}"
+        )
+
+        paths = self.project_folder_selector.get_paths()
+        self.preferences["projects_folder"] = paths[0] if paths else ""
+
+        cartesian_suffix = (
+            self.area_fields_inputs.get_value("cartesian_suffix") or ""
+        ).strip()
+        ellipsoidal_suffix = (
+            self.area_fields_inputs.get_value("ellipsoidal_suffix") or "_eli"
+        ).strip()
+
+        if cartesian_suffix == ellipsoidal_suffix:
+            QgisMessageUtil.modal_warning(
+                self.iface,
+                STR.AREA_SUFFIXES_CANNOT_MATCH,
+            )
+            self.logger.warning("Salvamento cancelado: sulfixos de area duplicados")
+            return False
+
+        self.prefer_VectorFields["cartesian_suffix"] = cartesian_suffix
+        self.prefer_VectorFields["ellipsoidal_suffix"] = ellipsoidal_suffix
+
+        self._persist_window_size()
+        self.on_finish_plugin()
+        Preferences.save_tool_prefs(ToolKey.SYSTEM, self.system_preferences)
+        Preferences.save_tool_prefs(ToolKey.VECTOR_FIELDS, self.prefer_VectorFields)
+        Preferences.save_tool_prefs(self.TOOL_KEY, self.preferences)
+        self.logger.info(
+            f"Preferências salvas:{self.system_preferences}==={self.preferences}"
+        )
+
+        # Se a visibilidade mudou, emite um evento abstrato para ajustes de toolbar
+        if needs_toolbar_refresh:
+            try:
+                from ..core.config.PyQtSignalManager import get_plugin_signal_hub
+
+                hub = get_plugin_signal_hub()
+                hub.toolbar_category_visibility_changed.emit(toolbar_visibility)
+                self.logger.debug(
+                    "Sinal de alteração de visibilidade da toolbar emitido pelo SettingsPlugin"
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Erro ao emitir sinal de alteração de visibilidade da toolbar: {e}"
+                )
+
+        return True
 
     def execute_tool(self):
         """Executa as configurações e fecha o diálogo."""
         self.logger.info("Aplicando configurações")
-        self._save_prefs()
-        
+        if not self._save_prefs():
+            return
+
         selected_method = self.radio_calc.get_selected_text()
-        QMessageBox.information(
-            self,
-            "Configurações Salvas",
-            f"Método de cálculo vetorial: {selected_method}\n\n"
-            f"As configurações foram salvas com sucesso."
+        QgisMessageUtil.modal_info(
+            self.iface,
+            message=(
+                f"{STR.CALCULATION_METHOD_LABEL} {selected_method}. "
+                f"{STR.DEFAULT_CRS}: {self.crs_selector.get_crs_authid()}. "
+                f"{STR.SETTINGS_SAVED_MESSAGE}"
+            ),
         )
-        
+
+        # Recarregar strings de tradução com o novo idioma
+        TranslationManager.reload_strings()
+        self.logger.info(
+            f"TranslationManager recarregado com locale: "
+            f"{self.system_preferences.get('plugin_language', 'pt_BR')}"
+        )
+
         self.logger.info("Configurações aplicadas e salvas")
         self.close()
 
-    def _on_open_preferences(self):
+    def _open_lic_dialog(self):
+        """
+        Abre o diálogo de gerenciamento de licença.
+        A licença é salva/gerenciada pelo LicDialog diretamente via LicManager.
+        """
+        self.logger.debug("Abrindo diálogo de gerenciamento de licença")
+        from ..core.ui.RegistryDialog import RegistryDialog
+
+        dialog = RegistryDialog(iface=self.iface, parent=self)
+        if hasattr(dialog, "exec_"):
+            dialog.exec_()
+        else:
+            dialog.exec()
+
+    def _open_preferences_folder(self):
         """Abre a pasta de preferências do Cadmus."""
         self.logger.debug("Abrindo pasta de preferências")
-        
+
         from ..utils.Preferences import PREF_FOLDER
-        import os
-        
-        if os.path.exists(PREF_FOLDER):
+
+        if ExplorerUtils.open_folder(PREF_FOLDER, self.TOOL_KEY):
             self.logger.info(f"Abrindo pasta: {PREF_FOLDER}")
-            QDesktopServices.openUrl(QUrl.fromLocalFile(PREF_FOLDER))
         else:
             self.logger.warning(f"Pasta de preferências não encontrada: {PREF_FOLDER}")
-            QMessageBox.warning(
-                self,
-                "Aviso",
-                f"Pasta de preferências não encontrada:\n{PREF_FOLDER}"
+            QgisMessageUtil.modal_warning(
+                iface=self.iface,
+                message=f"{STR.PREFERENCES_FOLDER_NOT_FOUND} {PREF_FOLDER}",
             )
 
 
-def run_settings(iface):
+def run(iface):
     """Função de entrada do plugin."""
     dlg = SettingsPlugin(iface)
     dlg.setModal(False)

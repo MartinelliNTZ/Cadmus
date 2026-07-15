@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 class CoffeTheme:
 
     # ==========================================================
@@ -20,7 +21,7 @@ class CoffeTheme:
 
         return f"rgba({r},{g},{b},{alpha})"
 
-       # ==========================================================
+    # ==========================================================
     # CORES BASE (TEMA)
     # ==========================================================
 
@@ -74,6 +75,10 @@ class CoffeTheme:
     ITEM_HEIGHT = STANDARD_SIZE
     CHECKBOX_SIZE = STANDARD_SIZE
     RADIO_SIZE = STANDARD_SIZE
+    COLOR_BUTTON_HEX_HEIGHT = 18
+    COLOR_BUTTON_PICKER_HEIGHT = 18
+    COLOR_BUTTON_COPY_SIZE = 20
+    COLOR_BUTTON_COPY_ICON_SIZE = 10
 
     # ==========================================================
     # ESPAÇAMENTOS

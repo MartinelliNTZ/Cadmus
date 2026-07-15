@@ -13,21 +13,17 @@ class HudCircularLoader(QWidget):
         self.progress = 0
         self.angle = 0
 
-        self.setWindowFlags(
-            Qt.FramelessWindowHint |
-            Qt.WindowStaysOnTopHint |
-            Qt.Tool
-        )
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
 
-       # self.setAttribute(Qt.WA_TranslucentBackground)
+        # self.setAttribute(Qt.WA_TranslucentBackground)
 
-        self.resize(220,220)
+        self.resize(220, 220)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.animate)
         self.timer.start(16)
 
-    def setProgress(self,val):
+    def setProgress(self, val):
 
         self.progress = val
         self.update()
@@ -40,7 +36,7 @@ class HudCircularLoader(QWidget):
 
         self.update()
 
-    def paintEvent(self,event):
+    def paintEvent(self, event):
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -49,23 +45,23 @@ class HudCircularLoader(QWidget):
         radius = 80
 
         # fundo
-        pen = QPen(QColor(30,40,60),3)
+        pen = QPen(QColor(30, 40, 60), 3)
         painter.setPen(pen)
-        painter.drawEllipse(center,radius,radius)
+        painter.drawEllipse(center, radius, radius)
 
         # progresso
-        pen = QPen(QColor(0,230,255),6)
+        pen = QPen(QColor(0, 230, 255), 6)
         painter.setPen(pen)
 
         span = int(-self.progress * 360 * 16 / 100)
 
         painter.drawArc(
-            center.x()-radius,
-            center.y()-radius,
-            radius*2,
-            radius*2,
-            90*16,
-            span
+            center.x() - radius,
+            center.y() - radius,
+            radius * 2,
+            radius * 2,
+            90 * 16,
+            span,
         )
 
         # bola girando
@@ -74,21 +70,17 @@ class HudCircularLoader(QWidget):
         bx = center.x() + radius * math.cos(angle_rad)
         by = center.y() + radius * math.sin(angle_rad)
 
-        painter.setBrush(QColor(0,255,255))
-        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(0, 255, 255))
+        painter.setPen(Qt.PenStyle.NoPen)
 
-        painter.drawEllipse(int(bx)-6,int(by)-6,12,12)
+        painter.drawEllipse(int(bx) - 6, int(by) - 6, 12, 12)
 
         # percentual
-        painter.setPen(QColor(0,255,255))
+        painter.setPen(QColor(0, 255, 255))
 
-        font = QFont("Consolas",22,QFont.Bold)
+        font = QFont("Consolas", 22, QFont.Bold)
         painter.setFont(font)
 
         text = f"{self.progress}%"
 
-        painter.drawText(
-            self.rect(),
-            Qt.AlignCenter,
-            text
-        )
+        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, text)

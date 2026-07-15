@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 from .BaseTask import BaseTask
 from ..config.LogUtils import LogUtils
@@ -22,7 +22,9 @@ class LoadFilesTask(BaseTask):
         if self.isCanceled():
             return False
 
-        self.logger.info(f"LoadFilesTask: iniciando validação de {len(self.records)} registros")
+        self.logger.info(
+            f"LoadFilesTask: iniciando validação de {len(self.records)} registros"
+        )
 
         valid = []
         for idx, rec in enumerate(self.records):
@@ -35,7 +37,9 @@ class LoadFilesTask(BaseTask):
                 if path and os.path.exists(path):
                     valid.append(rec)
                 else:
-                    self.logger.warning(f"LoadFilesTask: arquivo não encontrado, pulando: {path}")
+                    self.logger.warning(
+                        f"LoadFilesTask: arquivo não encontrado, pulando: {path}"
+                    )
             except Exception as e:
                 self.logger.error(f"LoadFilesTask: erro acessando {path}: {e}")
 
